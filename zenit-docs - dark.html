@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Zenit Docs Ultra - Fixed</title>
+    <script src="https://cdn.tailwindcss.com?plugins=typography"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/marked/9.1.2/marked.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github-dark.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+    
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Fira+Code:wght@400;500&display=swap');
+
+        :root {
+            --sb-bg-deep: #12141c;
+            --sb-bg-main: #171923;
+            --sb-bg-card: #1e222e;
+            --sb-border: #2e3545;
+            --sb-green: #3ecf8e;
+            --sb-text-main: #ededed;
+            --sb-text-muted: #9ca3af;
+        }
+
+        body { 
+            background-color: var(--sb-bg-deep); 
+            color: var(--sb-text-main); 
+            font-family: 'Inter', sans-serif;
+            overflow: hidden;
+            transition: background-color 0.4s ease;
+        }
+
+        /* Alerts Estilo GitHub */
+        .alert { border-left-width: 4px; padding: 1rem; margin: 1rem 0; border-radius: 6px; }
+        .alert-important { background: rgba(137, 87, 229, 0.1); border-color: #8957e5; color: #d2a8ff; }
+        .alert-note { background: rgba(59, 130, 246, 0.1); border-color: #3b82f6; color: #93c5fd; }
+        .alert-warning { background: rgba(210, 153, 34, 0.1); border-color: #d29922; color: #f0e053; }
+        .alert-tip { background: rgba(62, 207, 142, 0.1); border-color: var(--sb-green); color: #7ee787; }
+
+        /* MODO ZEN */
+        .zen-mode #main-header, .zen-mode #main-sidebar, .zen-mode #main-preview-container {
+            display: none !important;
+        }
+        .zen-mode #main-editor-container {
+            position: fixed; inset: 0; width: 100vw; height: 100vh;
+            background: var(--sb-bg-deep);
+            padding: 10vh 20vw;
+        }
+
+        #zen-indicator {
+            position: fixed; bottom: 20px; right: 20px;
+            font-size: 10px; color: var(--sb-text-muted);
+            opacity: 0; pointer-events: none;
+        }
+        .zen-mode #zen-indicator { opacity: 1; }
+
+        .sb-btn { background: var(--sb-bg-card); border: 1px solid var(--sb-border); transition: all 0.2s; }
+        .sb-btn:hover { border-color: #484f58; }
+        .sb-btn-primary { background: var(--sb-green); color: #000; }
+    </style>
+</head>
+<body class="h-screen flex flex-col">
+
+    <div id="zen-indicator" class="font-mono">Modo Zen Activo - Alt + Z para salir</div>
+
+    <header id="main-header" class="h-14 border-b border-[#2e3545] flex justify-between items-center bg-[#171923] px-4 shrink-0">
+        <div class="flex items-center gap-2">
+            <svg width="18" height="18" viewBox="0 0 128 128" fill="none"><path d="M109.13 62.06L72.29 101.99C66.19 108.6 56 104.28 56 95.28V72H18.87C10.74 72 6.13 62.61 11.09 56.17L49.03 7.03C55.03 -0.77 67 -0.19 67 9.61V32H103.11C111.95 32 116.14 42.79 109.13 42.06V62.06Z" fill="#3ECF8E"/></svg>
+            <h1 class="text-sm font-medium">Zenit <span class="text-gray-500">Docs</span></h1>
+        </div>
+        <div class="flex items-center gap-3">
+            <span id="save-status" class="text-[10px] font-mono text-gray-600">Guardado</span>
+            <button onclick="toggleZen()" class="sb-btn text-xs px-3 py-1 rounded">Alt + Z Modo Zen</button>
+            <button onclick="downloadMD()" class="sb-btn-primary text-xs px-4 py-1 rounded font-medium">Exportar .md</button>
+        </div>
+    </header>
+
+    <main class="flex-1 flex overflow-hidden">
+        <aside id="main-sidebar" class="w-64 border-r border-[#2e3545] bg-[#12141c] p-4 flex flex-col overflow-y-auto">
+            <h2 class="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-4">Variables</h2>
+            <div id="variables-list" class="space-y-3 flex-1"></div>
+            <button onclick="addVariable()" class="mt-4 text-[10px] text-gray-400 border border-dashed border-gray-700 py-2 rounded">+ Nueva Var</button>
+        </aside>
+
+        <div id="main-editor-container" class="flex-1 flex flex-col bg-[#171923]">
+            <textarea id="editor" class="flex-1 p-8 bg-transparent outline-none font-mono text-[13px] leading-relaxed text-[#ededed]" placeholder="Escribe algo aquí..."></textarea>
+        </div>
+
+        <div id="main-preview-container" class="flex-1 flex flex-col bg-[#12141c] border-l border-[#2e3545]">
+            <div id="preview" class="flex-1 p-10 overflow-y-auto prose prose-invert prose-green max-w-none prose-sm"></div>
+        </div>
+    </main>
+
+    <script>
+        let isZen = false;
+        let variables = JSON.parse(localStorage.getItem('zenit_vars_v2')) || {
+            "proyecto": "Mi_Nota",
+            "autor": "User"
+        };
+
+        const editor = document.getElementById('editor');
+        const preview = document.getElementById('preview');
+        const status = document.getElementById('save-status');
+        let debounceTimer;
+
+        function renderVariablesUI() {
+            const container = document.getElementById('variables-list');
+            container.innerHTML = '';
+            for (let key in variables) {
+                container.innerHTML += `
+                    <div class="bg-[#1e222e] p-2 rounded border border-[#2e3545]">
+                        <p class="text-[9px] text-[#3ecf8e] font-mono mb-1">{{${key}}}</p>
+                        <input type="text" value="${variables[key]}" 
+                            oninput="updateVar('${key}', this.value)"
+                            class="bg-[#12141c] w-full text-xs text-white px-2 py-1 rounded border border-[#2e3545] outline-none font-mono">
+                    </div>`;
+            }
+        }
+
+        function updateVar(key, val) {
+            variables[key] = val;
+            localStorage.setItem('zenit_vars_v2', JSON.stringify(variables));
+            renderMarkdown();
+        }
+
+        function addVariable() {
+            const name = prompt("Nombre:");
+            if (name) {
+                variables[name.replace(/\s+/g, '_')] = "valor";
+                renderVariablesUI();
+                renderMarkdown();
+            }
+        }
+
+        function toggleZen() {
+            isZen = !isZen;
+            document.body.classList.toggle('zen-mode', isZen);
+            renderMarkdown();
+        }
+
+        document.addEventListener('keydown', (e) => {
+            if (e.altKey && (e.key === 'z' || e.key === 'Z')) {
+                e.preventDefault();
+                toggleZen();
+            }
+            if (e.key === 'Escape' && isZen) toggleZen();
+        });
+
+        function renderMarkdown() {
+            status.innerText = "Sincronizando...";
+            clearTimeout(debounceTimer);
+            debounceTimer = setTimeout(() => {
+                let content = editor.value;
+                for (let key in variables) {
+                    content = content.replace(new RegExp({{${key}}}, 'g'), variables[key]);
+                }
+
+                let html = marked.parse(content);
+                const alerts = {'IMPORTANT': 'alert-important', 'NOTE': 'alert-note', 'WARNING': 'alert-warning', 'TIP': 'alert-tip'};
+                for (const [tag, className] of Object.entries(alerts)) {
+                    html = html.replace(new RegExp(<blockquote>\\s*<p>\\[!${tag}\\], 'g'), <div class="alert ${className}"><strong>${tag}</strong><p>);
+                }
+                html = html.replace(/<\/p>\s*<\/blockquote>/g, '</p></div>');
+
+                preview.innerHTML = html;
+                document.querySelectorAll('pre code').forEach((el) => hljs.highlightElement(el));
+                
+                localStorage.setItem('zenit_content_v2', editor.value);
+                status.innerText = "Guardado local";
+            }, 300);
+        }
+
+        function downloadMD() {
+            const blob = new Blob([editor.value], { type: 'text/markdown' });
+            const a = document.createElement('a');
+            a.href = URL.createObjectURL(blob);
+            a.download = ${variables.proyecto}.md;
+            a.click();
+        }
+
+        editor.addEventListener('input', renderMarkdown);
+        window.onload = () => {
+            const saved = localStorage.getItem('zenit_content_v2');
+            editor.value = saved || "# Bienvenido\n> [!TIP]\n> Pulsa Alt + Z para el modo Zen.";
+            renderVariablesUI();
+            renderMarkdown();
+        };
+    </script>
+</body>
+</html>
