@@ -40,3 +40,5 @@ build
 *.sln
 *.sw?
 Thumbs.db
+
+.vercel
