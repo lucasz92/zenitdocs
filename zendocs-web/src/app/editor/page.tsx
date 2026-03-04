@@ -65,7 +65,11 @@ export default function App() {
   useEffect(() => {
     const init = async () => {
       try {
-        const rows = await loadDocuments()
+        const response = await loadDocuments()
+        if (!response.success) {
+          throw new Error(response.error)
+        }
+        const rows = response.data
         if (rows.length > 0) {
           const mapped: DocumentNode[] = rows.map(r => ({
             id: r.id,
@@ -92,9 +96,9 @@ export default function App() {
           setActiveDocId(welcome.id)
         }
         setIsDBReady(true)
-      } catch (err) {
+      } catch (err: any) {
         console.error("Error loading from DB:", err)
-        toast.error("Error al cargar documentos de la nube.")
+        toast.error("Error al cargar documentos: " + (err.message || "Error desconocido"))
         setIsDBReady(true)
       }
     }
@@ -118,14 +122,16 @@ export default function App() {
   const persistDoc = useCallback(async (doc: DocumentNode) => {
     setStatus('saving')
     try {
-      await saveDocument({
+      const resp = await saveDocument({
         id: doc.id,
         name: doc.name,
         content: doc.content,
         description: doc.description,
       })
+      if (!resp.success) throw new Error(resp.error)
       setStatus('saved')
-    } catch {
+    } catch (e: any) {
+      console.error("Save error:", e)
       setStatus('error')
     }
   }, [])
@@ -169,8 +175,12 @@ export default function App() {
     setActiveDocId(newDoc.id)
     setIsDocModalOpen(false)
     setNewDocData({ name: '', description: '' })
-    await saveDocument(newDoc)
-    toast.success('Documento creado', { description: finalName })
+    const resp = await saveDocument(newDoc)
+    if (resp.success) {
+      toast.success('Documento creado', { description: finalName })
+    } else {
+      toast.error('Error al crear documento', { description: resp.error })
+    }
   }
 
   const handleDeleteDoc = async (id: string) => {
@@ -181,8 +191,12 @@ export default function App() {
       const remaining = docs.filter(d => d.id !== id)
       setActiveDocId(remaining[0]?.id ?? '')
     }
-    await deleteDocument(id)
-    toast.success('Documento eliminado', { description: doc.name })
+    const resp = await deleteDocument(id)
+    if (resp.success) {
+      toast.success('Documento eliminado', { description: doc.name })
+    } else {
+      toast.error('No se pudo eliminar', { description: resp.error })
+    }
   }
 
   const handleCreateVarSubmit = (e: React.FormEvent) => {
@@ -404,8 +418,8 @@ export default function App() {
                     <button
                       onClick={() => setActiveDocId(doc.id)}
                       className={`w-full text-left flex items-start gap-2.5 px-2.5 py-2 rounded-lg mb-0.5 transition-all ${activeDocId === doc.id
-                          ? 'bg-accent/10 text-accent'
-                          : 'text-text-muted hover:bg-border-color/40 hover:text-text-main'
+                        ? 'bg-accent/10 text-accent'
+                        : 'text-text-muted hover:bg-border-color/40 hover:text-text-main'
                         }`}
                     >
                       <FileText size={14} className={`mt-0.5 shrink-0 ${activeDocId === doc.id ? 'text-accent' : 'text-text-muted'}`} />
