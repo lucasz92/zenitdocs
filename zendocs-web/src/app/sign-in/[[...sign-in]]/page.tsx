@@ -68,10 +68,13 @@ export default function LoginPage() {
     const [mounted, setMounted] = useState(false);
 
     useEffect(() => {
-        setMounted(true);
-        if (window.location.hash === '#sign-up' || window.location.pathname.includes('sign-up')) {
-            setPanelActive(true);
-        }
+        const timer = setTimeout(() => {
+            setMounted(true);
+            if (window.location.hash === '#sign-up' || window.location.pathname.includes('sign-up')) {
+                setPanelActive(true);
+            }
+        }, 0);
+        return () => clearTimeout(timer);
     }, []);
 
     if (!mounted) return null;

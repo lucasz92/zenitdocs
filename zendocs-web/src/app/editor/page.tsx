@@ -127,7 +127,7 @@ export default function App() {
         setStatus("Error de guardado")
       })
     }, 500)
-    setStatus("Sincronizando disco...")
+    // Se quitó setStatus('Sincronizando...') para evitar renderización sincrónica 
     return () => clearTimeout(timer)
   }, [docs, isDBReady, isOnline])
 
