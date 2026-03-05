@@ -177,9 +177,9 @@ export default function Landing() {
             Empezar gratis
             <ArrowRight size={16} className="group-hover:translate-x-0.5 transition-transform" />
           </Link>
-          <Link
-            href="/editor"
-            className="flex items-center justify-center gap-2 px-8 py-3.5 rounded-xl font-semibold border transition-colors hover:border-accent"
+          <a
+            href="#features"
+            className="flex items-center justify-center gap-2 px-8 py-3.5 rounded-xl font-semibold border transition-colors"
             style={{
               background: 'color-mix(in srgb, var(--bg-card) 80%, transparent)',
               borderColor: 'var(--border-color)',
@@ -189,13 +189,13 @@ export default function Landing() {
             onMouseOver={e => { e.currentTarget.style.color = 'var(--text-main)'; e.currentTarget.style.borderColor = 'var(--accent)' }}
             onMouseOut={e => { e.currentTarget.style.color = 'var(--text-muted)'; e.currentTarget.style.borderColor = 'var(--border-color)' }}
           >
-            <Github size={15} />
-            Ver demo
-          </Link>
+            Ver características
+          </a>
         </div>
 
         {/* Feature grid */}
         <div
+          id="features"
           className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 w-full max-w-3xl mt-8 text-left fade-in-up"
           style={{ animationDelay: '0.2s' }}
         >

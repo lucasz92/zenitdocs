@@ -197,6 +197,21 @@ export function Preview({ content, variables }: { content: string; variables: Re
         })
     }, [html])
 
+    // Wrap tables in a scrollable div so wide tables scroll without breaking layout
+    useEffect(() => {
+        const container = previewRef.current
+        if (!container) return
+        const tables = container.querySelectorAll<HTMLTableElement>('table:not(.table-scroll-wrapper table)')
+        tables.forEach(table => {
+            // Don't double-wrap
+            if (table.parentElement?.classList.contains('table-scroll-wrapper')) return
+            const wrapper = document.createElement('div')
+            wrapper.className = 'table-scroll-wrapper'
+            table.parentNode?.insertBefore(wrapper, table)
+            wrapper.appendChild(table)
+        })
+    }, [html])
+
     // Render Mermaid (debounced so it doesn't flicker on every keystroke)
     useEffect(() => {
         const container = previewRef.current
@@ -262,7 +277,12 @@ export function Preview({ content, variables }: { content: string; variables: Re
                 fontFamily: 'var(--font-sans)',
                 background: isDark ? 'var(--bg-deep)' : '#ffffff',
             }}
-            dangerouslySetInnerHTML={{ __html: html }}
-        />
+        >
+            <div
+                className="prose prose-neutral max-w-none"
+                style={{ color: 'var(--text-main)' }}
+                dangerouslySetInnerHTML={{ __html: html }}
+            />
+        </div>
     )
 }

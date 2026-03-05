@@ -7,6 +7,7 @@ import {
   Printer, Trash2, Cloud, CloudOff, Loader2, Search, BookOpen,
   Menu, SplitSquareHorizontal, Eye, Edit3, FolderOpen, Folder,
   FolderPlus, FolderInput, ChevronRight, ChevronDown, MoreHorizontal, Pencil,
+  Smartphone, Clipboard, ZoomIn, ZoomOut,
 } from 'lucide-react'
 import { useTheme } from 'next-themes'
 import { UserButton } from "@clerk/nextjs"
@@ -104,6 +105,15 @@ function FormInput({ label, ...props }: { label: string } & React.InputHTMLAttri
   )
 }
 
+// ── Status Badge — defined outside App to avoid re-instantiation on each render ─
+function StatusBadge({ status, isOnline }: { status: 'idle' | 'saving' | 'saved' | 'error'; isOnline: boolean }) {
+  if (!isOnline) return <span className="flex items-center gap-1.5 text-amber-500 text-[10px] font-mono"><span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse" /> Offline</span>
+  if (status === 'saving') return <span className="flex items-center gap-1.5 text-[10px] font-mono" style={{ color: 'var(--text-faint)' }}><Loader2 size={10} className="animate-spin" /> Guardando</span>
+  if (status === 'saved') return <span className="flex items-center gap-1.5 text-emerald-500 text-[10px] font-mono"><Cloud size={10} /> Guardado</span>
+  if (status === 'error') return <span className="flex items-center gap-1.5 text-red-400 text-[10px] font-mono"><CloudOff size={10} /> Error</span>
+  return null
+}
+
 // ─────────────────────────────────────────────────────────────────────
 // ── Main App ──────────────────────────────────────────────────────────
 // ─────────────────────────────────────────────────────────────────────
@@ -114,11 +124,32 @@ export default function App() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(true)
   const [isMobile, setIsMobile] = useState(false)
   const [viewMode, setViewMode] = useState<ViewMode>('split')
+  const [phonePreview, setPhonePreview] = useState(false)
+  const [editorFontSize, setEditorFontSize] = useState<number>(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('zenit-font-size')
+      return saved ? parseInt(saved, 10) : 14
+    }
+    return 14
+  })
+
+  // Persist font size to localStorage
+  useEffect(() => {
+    localStorage.setItem('zenit-font-size', String(editorFontSize))
+  }, [editorFontSize])
 
   // ── Data state ──────────────────────────────────────────────────────
   const [docs, setDocs] = useState<DocumentNode[]>([])
   const [vaults, setVaults] = useState<VaultNode[]>([])
-  const [variables, setVariables] = useState<Record<string, string>>({ proyecto: 'Mi_Nota', autor: 'User' })
+  const [variables, setVariables] = useState<Record<string, string>>(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const saved = localStorage.getItem('zenit-variables')
+        if (saved) return JSON.parse(saved)
+      } catch { /* ignore */ }
+    }
+    return { proyecto: 'Mi_Nota', autor: 'User' }
+  })
   const [isDBReady, setIsDBReady] = useState(false)
   const [isOnline, setIsOnline] = useState(true)
   const [activeDocId, setActiveDocId] = useState<string>('')
@@ -135,6 +166,15 @@ export default function App() {
   const [varModal, setVarModal] = useState(false)
   const [newVarData, setNewVarData] = useState({ name: '', value: '' })
   const [vaultModal, setVaultModal] = useState<{ open: boolean; editing?: VaultNode }>({ open: false })
+
+  // ── Rename state ──────────────────────────────────────────────────────
+  const [renamingDocId, setRenamingDocId] = useState<string | null>(null)
+  const [renameValue, setRenameValue] = useState('')
+
+  // ── Persist variables ────────────────────────────────────────────────
+  useEffect(() => {
+    localStorage.setItem('zenit-variables', JSON.stringify(variables))
+  }, [variables])
   const [newVaultData, setNewVaultData] = useState({ name: '', color: 'blue', icon: '📁' })
 
   const activeDoc = isDBReady ? (docs.find(d => d.id === activeDocId) || docs[0] || null) : null
@@ -194,7 +234,7 @@ export default function App() {
         } else {
           const welcome: DocumentNode = {
             id: Date.now().toString(), name: 'Bienvenido.md',
-            content: `# 👋 Bienvenido a Zenit Docs\n\n> [!TIP]\n> Pulsa **Alt+Z** para el modo Zen. Las listas se continúan automáticamente con Enter.\n\n## Características\n\n- Editor Markdown con vista previa en tiempo real\n- Click derecho en el editor para más opciones\n- Bóvedas para organizar tus documentos\n\n## Ejemplo de diagrama\n\n\`\`\`mermaid\ngraph LR;\n    A[Zenit Docs] --> B[Editor];\n    A --> C[Bóvedas];\n    B --> D[Auto-guardado];\n    C --> E[Organización];\n\`\`\`\n\n| Feature | Estado |\n| ------- | ------ |\n| Markdown | ✅ |\n| Mermaid | ✅ |\n| Bóvedas | ✅ |\n`,
+            content: `# 👋 Bienvenido a Zenit Docs\n\n> [!TIP]\n> Pulsa **Alt+Z** para el modo Zen. Las listas se continúan automáticamente con Enter.\n\n## Atajos de teclado\n\n| Atajo | Acción |\n| --- | --- |\n| Alt+Z | Modo Zen (sin distracciones) |\n| Alt+P | Vista previa en teléfono |\n| Ctrl+B | Negrita |\n| Ctrl+I | Cursiva |\n| Ctrl+K | Enlace |\n| Enter | Continuar lista/cita |\n\n## Características\n\n- Editor Markdown con vista previa en tiempo real\n- Click derecho en el editor para más opciones\n- Bóvedas para organizar tus documentos\n- Pegar tablas de Excel → se convierten a Markdown\n\n## Ejemplo de diagrama\n\n\`\`\`mermaid\ngraph LR;\n    A[Zenit Docs] --> B[Editor];\n    A --> C[Bóvedas];\n    B --> D[Auto-guardado];\n    C --> E[Organización];\n\`\`\`\n`,
             description: 'Documento inicial.', vaultId: null,
             createdAt: Date.now(), updatedAt: Date.now(),
           }
@@ -213,11 +253,15 @@ export default function App() {
   useEffect(() => {
     const h = (e: KeyboardEvent) => {
       if (e.altKey && e.key.toLowerCase() === 'z') { e.preventDefault(); setIsZen(p => !p) }
-      if (e.key === 'Escape' && isZen) setIsZen(false)
+      if (e.altKey && e.key.toLowerCase() === 'p') { e.preventDefault(); setPhonePreview(p => !p) }
+      if (e.key === 'Escape') {
+        if (phonePreview) setPhonePreview(false)
+        else if (isZen) setIsZen(false)
+      }
     }
     document.addEventListener('keydown', h)
     return () => document.removeEventListener('keydown', h)
-  }, [isZen])
+  }, [isZen, phonePreview])
 
   // ── Auto-save ─────────────────────────────────────────────────────────
   const persistDoc = useCallback(async (doc: DocumentNode) => {
@@ -264,8 +308,12 @@ export default function App() {
 
   const handleDeleteDoc = async (id: string) => {
     const doc = docs.find(d => d.id === id); if (!doc) return
-    setDocs(p => p.filter(d => d.id !== id))
-    if (activeDocId === id) setActiveDocId(docs.filter(d => d.id !== id)[0]?.id ?? '')
+    const confirmed = window.confirm(`¿Eliminar "${doc.name.replace('.md', '')}"? Esta acción no se puede deshacer.`)
+    if (!confirmed) return
+    const remaining = docs.filter(d => d.id !== id)
+    setDocs(remaining)
+    // If we just deleted the active doc, switch to the next one (or none)
+    if (activeDocId === id) setActiveDocId(remaining[0]?.id ?? '')
     const resp = await deleteDocument(id)
     if (resp.success) toast.success('Eliminado', { description: doc.name })
     else toast.error('Error al eliminar')
@@ -289,17 +337,16 @@ export default function App() {
 
   const handleDeleteVault = async (id: string) => {
     const vault = vaults.find(v => v.id === id); if (!vault) return
+    const docCount = docs.filter(d => d.vaultId === id).length
+    const msg = docCount > 0
+      ? `¿Eliminar la bóveda "${vault.name}"? Sus ${docCount} documento${docCount > 1 ? 's' : ''} quedarán en la raíz.`
+      : `¿Eliminar la bóveda "${vault.name}"?`
+    if (!window.confirm(msg)) return
     setVaults(p => p.filter(v => v.id !== id))
     setDocs(p => p.map(d => d.vaultId === id ? { ...d, vaultId: null } : d))
     const resp = await deleteVault(id)
     if (resp.success) toast.success('Bóveda eliminada', { description: vault.name })
     else toast.error('Error al eliminar bóveda')
-  }
-
-  const handleMoveDocToVault = async (docId: string, vaultId: string | null) => {
-    setDocs(p => p.map(d => d.id === docId ? { ...d, vaultId } : d))
-    const doc = docs.find(d => d.id === docId); if (!doc) return
-    await saveDocument({ id: doc.id, name: doc.name, content: doc.content, vaultId })
   }
 
   // ── Variable CRUD ─────────────────────────────────────────────────────
@@ -312,6 +359,22 @@ export default function App() {
     toast.success('Variable añadida', { description: `{{${key}}}` })
   }
 
+  const handleDeleteVar = (key: string) => {
+    setVariables(prev => { const next = { ...prev }; delete next[key]; return next })
+    toast.success('Variable eliminada', { description: `{{${key}}}` })
+  }
+
+  // ── Doc inline rename ─────────────────────────────────────────────────
+  const handleRenameDoc = async (id: string, newName: string) => {
+    const trimmed = newName.trim()
+    setRenamingDocId(null)
+    if (!trimmed) return
+    const finalName = trimmed.endsWith('.md') ? trimmed : `${trimmed}.md`
+    setDocs(prev => prev.map(d => d.id === id ? { ...d, name: finalName } : d))
+    const resp = await updateDocument(id, { name: finalName })
+    if (!resp.success) toast.error('Error al renombrar')
+  }
+
   // ── Misc ──────────────────────────────────────────────────────────────
   const handleDownload = () => {
     if (!activeDoc) return
@@ -320,6 +383,16 @@ export default function App() {
     a.download = activeDoc.name; a.click()
     toast.success('Exportado')
   }
+
+  const handleCopyHTML = () => {
+    // Copy only the rendered prose HTML, not wrapper markup
+    const el = document.querySelector('#main-preview-container .prose')
+    if (!el) { toast.error('Abre la vista previa primero'); return }
+    navigator.clipboard.writeText(el.innerHTML).then(() => {
+      toast.success('HTML copiado al portapapeles')
+    }).catch(() => toast.error('No se pudo copiar'))
+  }
+
   const formatDate = (ts: number) =>
     new Intl.DateTimeFormat('es-AR', { dateStyle: 'short', timeStyle: 'short' }).format(new Date(ts))
 
@@ -341,15 +414,6 @@ export default function App() {
     }
   }
 
-  // ── Status Indicator ──────────────────────────────────────────────────
-  const StatusBadge = () => {
-    if (!isOnline) return <span className="flex items-center gap-1.5 text-amber-500 text-[10px] font-mono"><span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse" /> Offline</span>
-    if (status === 'saving') return <span className="flex items-center gap-1.5 text-[10px] font-mono" style={{ color: 'var(--text-faint)' }}><Loader2 size={10} className="animate-spin" /> Guardando</span>
-    if (status === 'saved') return <span className="flex items-center gap-1.5 text-emerald-500 text-[10px] font-mono"><Cloud size={10} /> Guardado</span>
-    if (status === 'error') return <span className="flex items-center gap-1.5 text-red-400 text-[10px] font-mono"><CloudOff size={10} /> Error</span>
-    return null
-  }
-
   // ── Loading ───────────────────────────────────────────────────────────
   if (!isDBReady) return (
     <div className="h-screen flex flex-col items-center justify-center gap-4" style={{ background: 'var(--bg-deep)' }}>
@@ -359,13 +423,20 @@ export default function App() {
   )
 
   if (!activeDoc) return (
-    <div className="h-screen flex flex-col items-center justify-center gap-5" style={{ background: 'var(--bg-deep)' }}>
-      <FileText style={{ color: 'var(--text-muted)' }} size={32} />
+    <div className="h-screen flex flex-col items-center justify-center gap-4" style={{ background: 'var(--bg-deep)' }}>
+      <div className="p-4 rounded-2xl" style={{ background: 'color-mix(in srgb, var(--accent) 8%, var(--bg-card))', border: '1px solid color-mix(in srgb, var(--accent) 20%, var(--border-color))' }}>
+        <FileText size={32} style={{ color: 'var(--accent)' }} />
+      </div>
+      <div className="text-center">
+        <p className="font-semibold text-sm mb-1" style={{ color: 'var(--text-main)' }}>Sin documentos</p>
+        <p className="text-xs" style={{ color: 'var(--text-faint)' }}>Crea tu primer documento para empezar a escribir</p>
+      </div>
       <button onClick={() => setDocModal({ open: true })}
-        className="flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-semibold text-white hover:opacity-90"
+        className="flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-semibold text-white hover:opacity-90 transition-opacity"
         style={{ background: 'var(--accent)' }}>
         <Plus size={15} /> Nuevo Documento
       </button>
+      <p className="text-[10px] font-mono" style={{ color: 'var(--text-faint)' }}>o abre el menú lateral con el botón ☰</p>
     </div>
   )
 
@@ -376,43 +447,75 @@ export default function App() {
   function DocItem({ doc }: { doc: DocumentNode }) {
     const isActive = activeDocId === doc.id
     const menuOpen = docMenu?.docId === doc.id && docMenu.open
+    const isRenaming = renamingDocId === doc.id
     return (
       <div className="group relative">
-        <button onClick={() => setActiveDocId(doc.id)}
-          className={`w-full text-left flex items-start gap-2 px-2.5 py-1.5 rounded-lg transition-all ${isActive ? 'doc-tab-active' : ''}`}
-          style={{ background: isActive ? 'color-mix(in srgb, var(--accent) 10%, transparent)' : 'transparent', color: isActive ? 'var(--text-main)' : 'var(--text-muted)' }}
-          onMouseOver={e => { if (!isActive) e.currentTarget.style.background = 'var(--bg-hover)' }}
-          onMouseOut={e => { if (!isActive) e.currentTarget.style.background = 'transparent' }}>
-          <span className="text-sm mt-0.5 shrink-0">{getDocIcon(doc.name)}</span>
-          <div className="flex flex-col min-w-0 flex-1">
-            <span className="text-[12px] font-medium truncate leading-tight" style={{ paddingRight: 36, color: isActive ? 'var(--text-main)' : '' }}>
-              {doc.name.replace('.md', '')}
-            </span>
-            {doc.description && <span className="text-[10px] truncate leading-tight mt-0.5" style={{ color: 'var(--text-faint)' }}>{doc.description}</span>}
+        {isRenaming ? (
+          /* ── Inline rename input ── */
+          <div className="flex items-center gap-2 px-2.5 py-1.5 rounded-lg" style={{ background: 'color-mix(in srgb, var(--accent) 10%, transparent)' }}>
+            <span className="text-sm shrink-0">{getDocIcon(doc.name)}</span>
+            <input
+              autoFocus
+              className="flex-1 bg-transparent text-[12px] font-medium outline-none border-b"
+              style={{ color: 'var(--text-main)', borderColor: 'var(--accent)', minWidth: 0 }}
+              value={renameValue}
+              onChange={e => setRenameValue(e.target.value)}
+              onKeyDown={e => {
+                if (e.key === 'Enter') handleRenameDoc(doc.id, renameValue)
+                if (e.key === 'Escape') setRenamingDocId(null)
+              }}
+              onBlur={() => handleRenameDoc(doc.id, renameValue)}
+            />
           </div>
-        </button>
-
-        {/* Action buttons (hover) */}
-        <div className="absolute right-1 top-1/2 -translate-y-1/2 flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-all">
-          {/* Move to vault button */}
+        ) : (
           <button
-            onClick={e => { e.stopPropagation(); setDocMenu({ docId: doc.id, open: !menuOpen }) }}
-            className="p-1 rounded-md"
-            title="Mover a..."
-            style={{ color: 'var(--text-faint)' }}
-            onMouseOver={e => { e.currentTarget.style.background = 'var(--bg-hover)'; e.currentTarget.style.color = 'var(--accent)' }}
-            onMouseOut={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'var(--text-faint)' }}>
-            <FolderInput size={11} />
+            onClick={() => setActiveDocId(doc.id)}
+            onDoubleClick={() => { setRenamingDocId(doc.id); setRenameValue(doc.name.replace('.md', '')) }}
+            className={`w-full text-left flex items-start gap-2 px-2.5 py-1.5 rounded-lg transition-all ${isActive ? 'doc-tab-active' : ''}`}
+            style={{ background: isActive ? 'color-mix(in srgb, var(--accent) 10%, transparent)' : 'transparent', color: isActive ? 'var(--text-main)' : 'var(--text-muted)' }}
+            onMouseOver={e => { if (!isActive) e.currentTarget.style.background = 'var(--bg-hover)' }}
+            onMouseOut={e => { if (!isActive) e.currentTarget.style.background = 'transparent' }}>
+            <span className="text-sm mt-0.5 shrink-0">{getDocIcon(doc.name)}</span>
+            <div className="flex flex-col min-w-0 flex-1">
+              <span className="text-[12px] font-medium truncate leading-tight" style={{ paddingRight: 36, color: isActive ? 'var(--text-main)' : '' }}>
+                {doc.name.replace('.md', '')}
+              </span>
+              {doc.description && <span className="text-[10px] truncate leading-tight mt-0.5" style={{ color: 'var(--text-faint)' }}>{doc.description}</span>}
+            </div>
           </button>
-          {/* Delete button */}
-          <button onClick={() => handleDeleteDoc(doc.id)}
-            className="p-1 rounded-md"
-            style={{ color: 'var(--text-faint)' }}
-            onMouseOver={e => { e.currentTarget.style.background = 'rgba(248,81,73,0.15)'; e.currentTarget.style.color = '#f85149' }}
-            onMouseOut={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'var(--text-faint)' }}>
-            <Trash2 size={11} />
-          </button>
-        </div>
+        )}
+
+        {/* Action buttons (hover) — hidden while renaming */}
+        {!isRenaming && (
+          <div className="absolute right-1 top-1/2 -translate-y-1/2 flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-all">
+            {/* Rename button */}
+            <button
+              onClick={e => { e.stopPropagation(); setRenamingDocId(doc.id); setRenameValue(doc.name.replace('.md', '')) }}
+              className="p-1 rounded-md" title="Renombrar (o doble clic)"
+              style={{ color: 'var(--text-faint)' }}
+              onMouseOver={e => { e.currentTarget.style.background = 'var(--bg-hover)'; e.currentTarget.style.color = 'var(--accent)' }}
+              onMouseOut={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'var(--text-faint)' }}>
+              <Pencil size={11} />
+            </button>
+            {/* Move to vault button */}
+            <button
+              onClick={e => { e.stopPropagation(); setDocMenu({ docId: doc.id, open: !menuOpen }) }}
+              className="p-1 rounded-md" title="Mover a..."
+              style={{ color: 'var(--text-faint)' }}
+              onMouseOver={e => { e.currentTarget.style.background = 'var(--bg-hover)'; e.currentTarget.style.color = 'var(--accent)' }}
+              onMouseOut={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'var(--text-faint)' }}>
+              <FolderInput size={11} />
+            </button>
+            {/* Delete button */}
+            <button onClick={() => handleDeleteDoc(doc.id)}
+              className="p-1 rounded-md"
+              style={{ color: 'var(--text-faint)' }}
+              onMouseOver={e => { e.currentTarget.style.background = 'rgba(248,81,73,0.15)'; e.currentTarget.style.color = '#f85149' }}
+              onMouseOut={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'var(--text-faint)' }}>
+              <Trash2 size={11} />
+            </button>
+          </div>
+        )}
 
         {/* Move dropdown */}
         {menuOpen && (
@@ -421,7 +524,6 @@ export default function App() {
             style={{ background: 'var(--bg-card)', borderColor: 'var(--border-color)' }}
             onMouseLeave={() => setDocMenu(null)}>
             <div className="px-3 py-1 text-[10px] font-bold uppercase tracking-widest" style={{ color: 'var(--text-faint)' }}>Mover a...</div>
-            {/* Root */}
             <button
               onClick={() => handleMoveDoc(doc.id, null)}
               disabled={!doc.vaultId}
@@ -431,7 +533,6 @@ export default function App() {
               onMouseOut={e => { e.currentTarget.style.background = 'transparent' }}>
               <span>📂</span> Raíz
             </button>
-            {/* Vault options */}
             {vaults.map(v => (
               <button key={v.id}
                 onClick={() => handleMoveDoc(doc.id, v.id)}
@@ -546,6 +647,105 @@ export default function App() {
         </Modal>
       )}
 
+      {/* ── PHONE PREVIEW MODAL ───────────────────────────────────── */}
+      {phonePreview && activeDoc && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center"
+          style={{ background: 'rgba(0,0,0,0.75)', backdropFilter: 'blur(12px)' }}
+          onClick={() => setPhonePreview(false)}>
+          <div className="flex flex-col items-center gap-4 fade-in-up" onClick={e => e.stopPropagation()}>
+            {/* Label */}
+            <div className="flex items-center gap-2">
+              <Smartphone size={14} style={{ color: 'var(--accent)' }} />
+              <span className="text-xs font-semibold" style={{ color: 'var(--text-muted)' }}>Vista previa · {activeDoc.name.replace('.md', '')}</span>
+              <button onClick={() => setPhonePreview(false)}
+                className="ml-2 p-1 rounded-md transition-colors"
+                style={{ color: 'var(--text-faint)' }}
+                onMouseOver={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.1)')}
+                onMouseOut={e => (e.currentTarget.style.background = 'transparent')}>
+                <X size={13} />
+              </button>
+            </div>
+            {/* Phone frame */}
+            <div style={{
+              width: 375,
+              height: 680,
+              borderRadius: 44,
+              background: '#0a0a0a',
+              padding: '14px 14px',
+              boxShadow: '0 0 0 2px #222, 0 0 0 4px #3a3a3a, 0 32px 80px rgba(0,0,0,0.7)',
+              position: 'relative',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: 0,
+            }}>
+              {/* Dynamic island */}
+              <div style={{
+                position: 'absolute', top: 14, left: '50%', transform: 'translateX(-50%)',
+                width: 120, height: 34, background: '#0a0a0a',
+                borderRadius: 20, zIndex: 10,
+                boxShadow: 'inset 0 0 0 1px #222',
+              }} />
+              {/* Screen */}
+              <div style={{
+                flex: 1,
+                borderRadius: 34,
+                overflow: 'hidden',
+                background: '#fff',
+                display: 'flex',
+                flexDirection: 'column',
+              }}>
+                {/* Status bar */}
+                <div style={{
+                  height: 50,
+                  background: 'var(--bg-main)',
+                  display: 'flex',
+                  alignItems: 'flex-end',
+                  justifyContent: 'space-between',
+                  padding: '0 20px 8px',
+                  fontSize: 11,
+                  fontWeight: 600,
+                  color: 'var(--text-muted)',
+                  flexShrink: 0,
+                }}>
+                  <span>9:41</span>
+                  <span style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
+                    <span>▲▲▲</span>
+                    <span>WiFi</span>
+                    <span>🔋</span>
+                  </span>
+                </div>
+                {/* Scrollable preview content */}
+                <div
+                  id="phone-preview-container"
+                  style={{
+                    flex: 1,
+                    overflowY: 'auto',
+                    padding: '16px 18px',
+                    color: 'var(--text-main)',
+                    background: 'var(--bg-deep)',
+                  }}
+                >
+                  <div
+                    className="prose prose-neutral max-w-none"
+                    style={{ fontSize: 13 }}
+                    dangerouslySetInnerHTML={{
+                      __html:
+                        (() => {
+                          const el = document.getElementById('main-preview-container')
+                          // grab the inner prose div content
+                          const inner = el?.querySelector('.prose')
+                          return inner ? inner.innerHTML : ''
+                        })()
+                    }}
+                  />
+                </div>
+              </div>
+            </div>
+            <p className="text-[10px]" style={{ color: 'var(--text-faint)' }}>Alt+P · Clic fuera para cerrar</p>
+          </div>
+        </div>
+      )}
+
       {/* ── ZEN HUD ──────────────────────────────────────────────── */}
       <div className={`fixed bottom-6 left-1/2 -translate-x-1/2 text-[10px] font-mono px-3 py-1.5 rounded-full border transition-all duration-300 z-50 ${isZen ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
         style={{ background: 'var(--bg-card)', borderColor: 'var(--border-color)', color: 'var(--text-faint)' }}>
@@ -589,10 +789,43 @@ export default function App() {
 
         {/* Actions */}
         <div className="flex items-center gap-1.5">
-          <StatusBadge />
+          <StatusBadge status={status} isOnline={isOnline} />
           <div className="w-px h-4 mx-1" style={{ background: 'var(--border-color)' }} />
           <ThemeToggle /><UserButton />
           <div className="w-px h-4 mx-1" style={{ background: 'var(--border-color)' }} />
+          {/* Zoom controls */}
+          <div className="hidden md:flex items-center gap-0.5">
+            <button onClick={() => setEditorFontSize(s => Math.max(10, s - 1))}
+              className="p-1.5 rounded-md transition-colors" style={{ color: 'var(--text-muted)' }}
+              onMouseOver={e => (e.currentTarget.style.background = 'var(--bg-hover)')}
+              onMouseOut={e => (e.currentTarget.style.background = 'transparent')} title="Reducir fuente">
+              <ZoomOut size={13} />
+            </button>
+            <span className="text-[10px] font-mono w-7 text-center" style={{ color: 'var(--text-faint)' }}>{editorFontSize}</span>
+            <button onClick={() => setEditorFontSize(s => Math.min(24, s + 1))}
+              className="p-1.5 rounded-md transition-colors" style={{ color: 'var(--text-muted)' }}
+              onMouseOver={e => (e.currentTarget.style.background = 'var(--bg-hover)')}
+              onMouseOut={e => (e.currentTarget.style.background = 'transparent')} title="Aumentar fuente">
+              <ZoomIn size={13} />
+            </button>
+          </div>
+          <div className="hidden md:block w-px h-4" style={{ background: 'var(--border-color)' }} />
+          {/* Phone preview */}
+          <button onClick={() => setPhonePreview(true)}
+            className="p-1.5 rounded-md transition-colors" style={{ color: viewMode !== 'editor' ? 'var(--text-muted)' : 'var(--text-faint)' }}
+            onMouseOver={e => { e.currentTarget.style.background = 'var(--bg-hover)'; e.currentTarget.style.color = 'var(--accent)' }}
+            onMouseOut={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'var(--text-muted)' }}
+            title="Vista previa en teléfono (Alt+P)">
+            <Smartphone size={14} />
+          </button>
+          {/* Copy HTML */}
+          <button onClick={handleCopyHTML}
+            className="p-1.5 rounded-md transition-colors" style={{ color: 'var(--text-muted)' }}
+            onMouseOver={e => { e.currentTarget.style.background = 'var(--bg-hover)'; e.currentTarget.style.color = 'var(--accent)' }}
+            onMouseOut={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'var(--text-muted)' }}
+            title="Copiar como HTML">
+            <Clipboard size={14} />
+          </button>
           <button onClick={() => window.print()} className="p-1.5 rounded-md transition-colors" style={{ color: 'var(--text-muted)' }}
             onMouseOver={e => (e.currentTarget.style.background = 'var(--bg-hover)')}
             onMouseOut={e => (e.currentTarget.style.background = 'transparent')} title="Imprimir">
@@ -774,14 +1007,30 @@ export default function App() {
                 </div>
                 <div className="flex-1 overflow-y-auto px-2 pb-2 space-y-2">
                   {Object.entries(variables).map(([key, val]) => (
-                    <div key={key} className="rounded-lg border p-2.5" style={{ background: 'var(--bg-main)', borderColor: 'var(--border-color)' }}>
-                      <p className="text-[10px] font-bold font-mono mb-1.5 flex items-center gap-1" style={{ color: 'var(--accent)' }}>
-                        <Hash size={9} />{`{{${key}}}`}
-                      </p>
+                    <div key={key} className="group rounded-lg border p-2.5 relative" style={{ background: 'var(--bg-main)', borderColor: 'var(--border-color)' }}>
+                      <div className="flex items-center justify-between mb-1.5">
+                        <p className="text-[10px] font-bold font-mono flex items-center gap-1" style={{ color: 'var(--accent)' }}>
+                          <Hash size={9} />{`{{${key}}}`}
+                        </p>
+                        <button
+                          onClick={() => handleDeleteVar(key)}
+                          className="opacity-0 group-hover:opacity-100 p-0.5 rounded transition-all"
+                          title="Eliminar variable"
+                          style={{ color: 'var(--text-faint)' }}
+                          onMouseOver={e => { e.currentTarget.style.color = '#f85149'; e.currentTarget.style.background = 'rgba(248,81,73,0.12)' }}
+                          onMouseOut={e => { e.currentTarget.style.color = 'var(--text-faint)'; e.currentTarget.style.background = 'transparent' }}>
+                          <X size={10} />
+                        </button>
+                      </div>
                       <input type="text" value={val} onChange={e => setVariables(p => ({ ...p, [key]: e.target.value }))}
                         className="bg-transparent w-full text-[11px] outline-none font-mono" style={{ color: 'var(--text-main)' }} placeholder="valor..." />
                     </div>
                   ))}
+                  {Object.keys(variables).length === 0 && (
+                    <div className="text-center py-6">
+                      <p className="text-[11px]" style={{ color: 'var(--text-faint)' }}>Sin variables. Creá una con +</p>
+                    </div>
+                  )}
                 </div>
                 <div className="px-2 py-2 border-t shrink-0" style={{ borderColor: 'var(--border-color)' }}>
                   <button onClick={() => setVarModal(true)}
@@ -819,8 +1068,8 @@ export default function App() {
           {/* Editor + Preview */}
           <div className="flex-1 flex overflow-hidden">
             <div className={`flex flex-col overflow-hidden transition-all duration-300 ${viewMode === 'preview' ? 'w-0 opacity-0' : 'flex-1'}`}
-              style={{ background: 'var(--bg-main)' }}>
-              <Editor key={activeDoc.id} content={activeDoc.content} onChange={handleUpdateContent} />
+              style={{ background: 'var(--bg-main)', fontSize: editorFontSize }}>
+              <Editor key={activeDoc.id} content={activeDoc.content} onChange={handleUpdateContent} fontSize={editorFontSize} />
             </div>
 
             {viewMode === 'split' && <div className="w-px shrink-0" style={{ background: 'var(--border-color)' }} />}

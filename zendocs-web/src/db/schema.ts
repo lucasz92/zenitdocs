@@ -5,7 +5,7 @@ export const vaults = pgTable("vaults", {
     userId: varchar("user_id", { length: 100 }).notNull(),
     name: varchar("name", { length: 255 }).notNull(),
     color: varchar("color", { length: 30 }).default("blue"),
-    icon: varchar("icon", { length: 10 }).default("📁"),
+    icon: varchar("icon", { length: 20 }).default("📁"),
     createdAt: timestamp("created_at").defaultNow().notNull(),
     updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });

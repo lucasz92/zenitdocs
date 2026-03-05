@@ -44,13 +44,75 @@ type CtxMenuPos = { x: number; y: number } | null
 
 // ── Editor component ──────────────────────────────────────────────────
 
-export function Editor({ content, onChange }: { content: string; onChange: (v: string) => void }) {
+// ── Paste helpers ─────────────────────────────────────────────────────
+
+/** Convert an HTML <table> element to a Markdown table string */
+function htmlTableToMarkdown(table: HTMLTableElement): string {
+    const rows = Array.from(table.querySelectorAll('tr'))
+    if (rows.length === 0) return ''
+
+    const matrix: string[][] = rows.map(row =>
+        Array.from(row.querySelectorAll('th, td')).map(cell => {
+            // Flatten cell text, collapse whitespace, escape pipe chars
+            return (cell.textContent ?? '').replace(/\s+/g, ' ').trim().replace(/\|/g, '\\|')
+        })
+    )
+
+    if (matrix.length === 0 || matrix[0].length === 0) return ''
+
+    const cols = Math.max(...matrix.map(r => r.length))
+    // Pad rows to same column count
+    const padded = matrix.map(r => [...r, ...Array(cols - r.length).fill('')])
+
+    const header = padded[0]
+    const separator = header.map(() => '---')
+    const body = padded.slice(1)
+
+    const fmtRow = (cells: string[]) => `| ${cells.join(' | ')} |`
+    const lines = [
+        fmtRow(header),
+        fmtRow(separator),
+        ...body.map(fmtRow),
+    ]
+    return '\n' + lines.join('\n') + '\n'
+}
+
+/** Convert a TSV / CSV string to a Markdown table */
+function tsvToMarkdown(text: string): string {
+    // Detect separator: tab (TSV from Excel) or comma (CSV)
+    const lines = text.trim().split(/\r?\n/).filter(Boolean)
+    if (lines.length < 2) return text  // need at least header + 1 row to be a table
+
+    const sep = lines[0].includes('\t') ? '\t' : ','
+    const rows = lines.map(l => l.split(sep).map(c => c.trim().replace(/^"|"$/g, '').replace(/""/g, '"').replace(/\|/g, '\\|')))
+    const cols = Math.max(...rows.map(r => r.length))
+    const padded = rows.map(r => [...r, ...Array(cols - r.length).fill('')])
+
+    const header = padded[0]
+    const separator = header.map(() => '---')
+    const body = padded.slice(1)
+
+    const fmtRow = (cells: string[]) => `| ${cells.join(' | ')} |`
+    return '\n' + [fmtRow(header), fmtRow(separator), ...body.map(fmtRow)].join('\n') + '\n'
+}
+
+export function Editor({ content, onChange, fontSize = 13 }: { content: string; onChange: (v: string) => void; fontSize?: number }) {
     const taRef = useRef<HTMLTextAreaElement>(null)
     const ctxRef = useRef<HTMLDivElement>(null)
     const [showAlerts, setShowAlerts] = useState(false)
     const [ctxMenu, setCtxMenu] = useState<CtxMenuPos>(null)
+    const [pasteHint, setPasteHint] = useState<string | null>(null)
 
     // ── Core insert helpers ─────────────────────────────────────────────
+
+    const insertAtCursor = useCallback((text: string) => {
+        const ta = taRef.current; if (!ta) return
+        const s = ta.selectionStart, e = ta.selectionEnd
+        const next = ta.value.substring(0, s) + text + ta.value.substring(e)
+        onChange(next)
+        const pos = s + text.length
+        setTimeout(() => { ta.focus(); ta.setSelectionRange(pos, pos) }, 0)
+    }, [onChange])
 
     const insertWrap = useCallback((before: string, after = '') => {
         const ta = taRef.current; if (!ta) return
@@ -71,6 +133,44 @@ export function Editor({ content, onChange }: { content: string; onChange: (v: s
     }, [onChange])
 
     const getSelected = () => { const ta = taRef.current; return ta ? ta.value.substring(ta.selectionStart, ta.selectionEnd) : '' }
+
+    // ── Smart paste ─────────────────────────────────────────────────────
+
+    const handlePaste = useCallback((e: React.ClipboardEvent<HTMLTextAreaElement>) => {
+        const html = e.clipboardData.getData('text/html')
+        const plain = e.clipboardData.getData('text/plain')
+
+        // 1. HTML table (Excel, Google Sheets, websites)
+        if (html) {
+            const tmp = document.createElement('div')
+            tmp.innerHTML = html
+            const table = tmp.querySelector('table')
+            if (table) {
+                e.preventDefault()
+                const md = htmlTableToMarkdown(table as HTMLTableElement)
+                insertAtCursor(md)
+                setPasteHint('Tabla convertida a Markdown ✓')
+                setTimeout(() => setPasteHint(null), 2500)
+                return
+            }
+        }
+
+        // 2. TSV / CSV text (looks like a spreadsheet: multiple lines with tabs)
+        if (plain) {
+            const lines = plain.trim().split(/\r?\n/).filter(Boolean)
+            const hasTabs = lines.length >= 2 && lines.every(l => l.includes('\t'))
+            if (hasTabs) {
+                e.preventDefault()
+                const md = tsvToMarkdown(plain)
+                insertAtCursor(md)
+                setPasteHint('Tabla TSV convertida a Markdown ✓')
+                setTimeout(() => setPasteHint(null), 2500)
+                return
+            }
+        }
+
+        // 3. Plain Markdown / text → let browser handle it normally
+    }, [onChange, insertAtCursor])
 
     // ── Smart keyboard shortcuts ────────────────────────────────────────
 
@@ -318,17 +418,34 @@ export function Editor({ content, onChange }: { content: string; onChange: (v: s
             </div>
 
             {/* ── Textarea ─────────────────────────────────────────────────── */}
-            <textarea
-                ref={taRef}
-                value={content}
-                onChange={e => onChange(e.target.value)}
-                onKeyDown={handleKeyDown}
-                onContextMenu={handleContextMenu}
-                className="flex-1 w-full px-10 py-8 bg-transparent outline-none font-mono text-[13px] leading-7 resize-none custom-editor-textarea"
-                style={{ color: 'var(--text-main)' }}
-                placeholder="Escribe en Markdown... (Enter continúa listas | Ctrl+B Negrita | Ctrl+K Enlace | Click derecho → más opciones)"
-                spellCheck={false}
-            />
+            <div className="relative flex-1 flex flex-col">
+                {pasteHint && (
+                    <div
+                        className="absolute top-3 left-1/2 -translate-x-1/2 z-30 px-3 py-1.5 rounded-full text-[11px] font-semibold pointer-events-none"
+                        style={{
+                            background: 'color-mix(in srgb, var(--accent) 15%, var(--bg-card))',
+                            color: 'var(--accent)',
+                            border: '1px solid color-mix(in srgb, var(--accent) 30%, transparent)',
+                            boxShadow: '0 4px 16px rgba(0,0,0,0.25)',
+                            animation: 'fadeInUp 0.18s ease both',
+                        }}
+                    >
+                        {pasteHint}
+                    </div>
+                )}
+                <textarea
+                    ref={taRef}
+                    value={content}
+                    onChange={e => onChange(e.target.value)}
+                    onKeyDown={handleKeyDown}
+                    onContextMenu={handleContextMenu}
+                    onPaste={handlePaste}
+                    className="flex-1 w-full px-10 py-8 bg-transparent outline-none font-mono leading-7 resize-none custom-editor-textarea"
+                    style={{ color: 'var(--text-main)', fontSize: fontSize }}
+                    placeholder="Escribe en Markdown... (Enter continúa listas | Ctrl+B Negrita | Ctrl+K Enlace | Click derecho → más opciones)"
+                    spellCheck={false}
+                />
+            </div>
 
             {/* ── Context Menu ─────────────────────────────────────────────── */}
             {ctxMenu && (
