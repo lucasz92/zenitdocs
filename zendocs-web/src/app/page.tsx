@@ -1,85 +1,243 @@
 "use client";
 
-import { useRouter } from 'next/navigation'
-import { ThemeToggle } from '@/components/ThemeToggle'
-import { useTheme } from 'next-themes'
 import Link from 'next/link'
+import { ThemeToggle } from '@/components/ThemeToggle'
+import { Zap, BookOpen, Hash, GitBranch, Cloud, Shield, ArrowRight, Github, Star } from 'lucide-react'
+
+const FEATURES = [
+  {
+    icon: <BookOpen size={18} />,
+    title: 'Editor Markdown',
+    desc: 'Escribe con sintaxis Markdown estándar. Vista previa en tiempo real al lado.'
+  },
+  {
+    icon: <Hash size={18} />,
+    title: 'Variables Dinámicas',
+    desc: 'Inyecta valores con {{variable}} y cámbia todo el doc al instante.'
+  },
+  {
+    icon: <GitBranch size={18} />,
+    title: 'Diagramas UML',
+    desc: 'Crea diagramas Mermaid directamente desde bloques de código.'
+  },
+  {
+    icon: <Cloud size={18} />,
+    title: 'Auto-guardado',
+    desc: 'Todos tus documentos se sincronizan automáticamente en la nube.'
+  },
+  {
+    icon: <Shield size={18} />,
+    title: 'Seguro y Privado',
+    desc: 'Autenticación con Clerk. Solo vos accedés a tus documentos.'
+  },
+  {
+    icon: <Zap size={18} />,
+    title: 'Modo Zen',
+    desc: 'Activá el modo sin distracciones con Alt+Z y enfocáte en escribir.'
+  },
+]
 
 export default function Landing() {
-  const router = useRouter()
-  const { theme } = useTheme()
-
   return (
-    <div className="min-h-screen bg-bg-deep text-text-main font-sans flex flex-col transition-colors relative overflow-hidden">
-      {/* Animated Grid Background */}
+    <div
+      className="min-h-screen flex flex-col relative overflow-hidden"
+      style={{ background: 'var(--bg-deep)', color: 'var(--text-main)' }}
+    >
+      {/* Animated grid background */}
       <div className="bg-grid-mask">
-        <div className="bg-grid-moving"></div>
+        <div className="bg-grid-moving" />
       </div>
 
-      {/* Backdrop Blur Glow */}
-      <div className="absolute top-1/4 left-1/2 -translate-x-1/2 w-[800px] h-[300px] bg-accent/20 blur-[120px] rounded-full pointer-events-none rotate-12 z-0"></div>
+      {/* Purple glow orb */}
+      <div
+        className="absolute pointer-events-none z-0"
+        style={{
+          top: '10%',
+          left: '50%',
+          transform: 'translateX(-50%)',
+          width: 700,
+          height: 300,
+          background: 'radial-gradient(ellipse, color-mix(in srgb, var(--accent) 25%, transparent), transparent 70%)',
+          filter: 'blur(40px)',
+          borderRadius: '50%',
+        }}
+      />
+      <div
+        className="absolute pointer-events-none z-0"
+        style={{
+          bottom: '20%',
+          right: '10%',
+          width: 400,
+          height: 200,
+          background: 'radial-gradient(ellipse, color-mix(in srgb, var(--accent2) 15%, transparent), transparent 70%)',
+          filter: 'blur(60px)',
+          borderRadius: '50%',
+        }}
+      />
 
       {/* Header */}
-      <header className="h-16 px-6 lg:px-10 flex items-center justify-between border-b border-border-color bg-bg-main shrink-0 relative z-20">
-        <div className="flex items-center gap-2">
-          {theme === 'dark' ? (
-            <svg width="24" height="24" viewBox="0 0 128 128" fill="none"><path d="M109.13 62.06L72.29 101.99C66.19 108.6 56 104.28 56 95.28V72H18.87C10.74 72 6.13 62.61 11.09 56.17L49.03 7.03C55.03 -0.77 67 -0.19 67 9.61V32H103.11C111.95 32 116.14 42.79 109.13 42.06V62.06Z" fill="#4285f4" /></svg>
-          ) : (
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M13 2L3 14H12L11 22L21 10H12L13 2Z" fill="#4285f4" stroke="#4285f4" strokeWidth="2" strokeLinejoin="round" />
+      <header
+        className="relative z-20 h-14 px-6 lg:px-10 flex items-center justify-between border-b"
+        style={{ background: 'color-mix(in srgb, var(--bg-main) 80%, transparent)', borderColor: 'var(--border-color)', backdropFilter: 'blur(12px)' }}
+      >
+        <div className="flex items-center gap-2.5">
+          <div className="p-1.5 rounded-lg" style={{ background: 'color-mix(in srgb, var(--accent) 12%, transparent)' }}>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+              <path d="M13 2L3 14H12L11 22L21 10H12L13 2Z"
+                fill="var(--accent)" stroke="var(--accent)"
+                strokeWidth="1.5" strokeLinejoin="round" />
             </svg>
-          )}
-          <span className="font-semibold text-lg tracking-tight">Zenit <span className="text-[#4285f4]">Docs</span></span>
+          </div>
+          <span className="font-bold text-base tracking-tight" style={{ color: 'var(--text-main)' }}>
+            Zenit <span style={{ color: 'var(--accent)' }}>Docs</span>
+          </span>
+          <span
+            className="text-[9px] font-bold px-2 py-0.5 rounded-full border"
+            style={{ color: 'var(--accent)', borderColor: 'color-mix(in srgb, var(--accent) 40%, transparent)', background: 'color-mix(in srgb, var(--accent) 10%, transparent)' }}
+          >
+            BETA
+          </span>
         </div>
-        <div className="flex items-center gap-4">
+
+        <div className="flex items-center gap-3">
           <ThemeToggle />
           <Link
             href="/editor"
-            className="text-sm font-medium hover:text-accent transition-colors hidden sm:block"
+            className="text-sm font-medium transition-colors hidden sm:block"
+            style={{ color: 'var(--text-muted)' }}
+            onMouseOver={e => (e.currentTarget.style.color = 'var(--text-main)')}
+            onMouseOut={e => (e.currentTarget.style.color = 'var(--text-muted)')}
           >
-            Ir al Editor
+            Editor
           </Link>
           <Link
-            href="/editor"
-            className="bg-accent text-white px-5 py-2 rounded-md text-sm font-medium hover:opacity-90 transition-opacity"
+            href="/sign-in"
+            className="flex items-center gap-2 px-4 py-1.5 rounded-lg text-sm font-semibold text-white transition-opacity hover:opacity-85"
+            style={{ background: 'var(--accent)' }}
           >
-            Iniciar Sesión
+            Iniciar sesión
           </Link>
         </div>
       </header>
 
-      {/* Hero Section */}
+      {/* Hero */}
       <main className="flex-1 flex flex-col items-center justify-center p-6 text-center max-w-4xl mx-auto space-y-8 relative z-10">
-        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-border-color/30 backdrop-blur-sm text-xs font-semibold text-text-muted mb-4 border border-border-color shadow-sm">
-          <span>✨</span> Nueva experiencia de Markdown
+        {/* Badge */}
+        <div
+          className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full border text-xs font-semibold fade-in-up"
+          style={{
+            background: 'color-mix(in srgb, var(--accent) 8%, transparent)',
+            borderColor: 'color-mix(in srgb, var(--accent) 30%, transparent)',
+            color: 'var(--accent)',
+          }}
+        >
+          <Star size={11} fill="currentColor" />
+          Editor de documentación local-first
         </div>
 
-        <h1 className="text-4xl md:text-6xl font-bold tracking-tight text-text-main">
-          La forma <span className="text-accent">Zen</span> de crear documentación.
+        {/* Title */}
+        <h1
+          className="text-5xl md:text-7xl font-bold tracking-tight leading-[1.08] fade-in-up"
+          style={{ animationDelay: '0.05s', color: 'var(--text-main)' }}
+        >
+          La forma{' '}
+          <span
+            className="relative"
+            style={{
+              background: 'linear-gradient(135deg, #4285f4, #6ea8fe)',
+              WebkitBackgroundClip: 'text',
+              WebkitTextFillColor: 'transparent',
+              backgroundClip: 'text',
+            }}
+          >
+            Zen
+          </span>{' '}
+          de escribir.
         </h1>
 
-        <p className="text-lg md:text-xl text-text-muted max-w-2xl mt-4 leading-relaxed">
-          Un editor local-first y profesional de Markdown, diseñado para mantenerte enfocado. Variables dinámicas, atajos rápidos y componentes estilo GitHub en tiempo real.
+        {/* Subtitle */}
+        <p
+          className="text-lg md:text-xl max-w-2xl leading-relaxed fade-in-up"
+          style={{ color: 'var(--text-muted)', animationDelay: '0.1s' }}
+        >
+          Editor Markdown profesional con vista previa en tiempo real, variables dinámicas,
+          diagramas UML y auto-guardado en la nube.
         </p>
 
-        <div className="flex flex-col sm:flex-row gap-4 mt-8">
+        {/* CTA Buttons */}
+        <div className="flex flex-col sm:flex-row gap-3 fade-in-up" style={{ animationDelay: '0.15s' }}>
           <Link
             href="/editor"
-            className="bg-accent text-white px-8 py-3 rounded-md font-semibold hover:opacity-90 transition-opacity shadow-lg shadow-accent/20"
+            className="group flex items-center justify-center gap-2 px-8 py-3.5 rounded-xl font-semibold text-white transition-all hover:opacity-90 hover:scale-[1.02] shadow-xl"
+            style={{
+              background: 'var(--accent)',
+              boxShadow: '0 8px 32px color-mix(in srgb, var(--accent) 40%, transparent)',
+            }}
           >
-            Empezar a escribir gratis
+            Empezar gratis
+            <ArrowRight size={16} className="group-hover:translate-x-0.5 transition-transform" />
           </Link>
-          <button
-            className="px-8 py-3 rounded-md font-semibold bg-bg-card border border-border-color hover:bg-border-color/30 transition-colors"
+          <Link
+            href="/editor"
+            className="flex items-center justify-center gap-2 px-8 py-3.5 rounded-xl font-semibold border transition-colors hover:border-accent"
+            style={{
+              background: 'color-mix(in srgb, var(--bg-card) 80%, transparent)',
+              borderColor: 'var(--border-color)',
+              color: 'var(--text-muted)',
+              backdropFilter: 'blur(8px)',
+            }}
+            onMouseOver={e => { e.currentTarget.style.color = 'var(--text-main)'; e.currentTarget.style.borderColor = 'var(--accent)' }}
+            onMouseOut={e => { e.currentTarget.style.color = 'var(--text-muted)'; e.currentTarget.style.borderColor = 'var(--border-color)' }}
           >
-            Leer la documentación
-          </button>
+            <Github size={15} />
+            Ver demo
+          </Link>
+        </div>
+
+        {/* Feature grid */}
+        <div
+          className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 w-full max-w-3xl mt-8 text-left fade-in-up"
+          style={{ animationDelay: '0.2s' }}
+        >
+          {FEATURES.map((f, i) => (
+            <div
+              key={i}
+              className="p-4 rounded-xl border transition-all duration-200"
+              style={{
+                background: 'color-mix(in srgb, var(--bg-card) 70%, transparent)',
+                borderColor: 'var(--border-color)',
+                backdropFilter: 'blur(8px)',
+              }}
+              onMouseOver={e => {
+                e.currentTarget.style.borderColor = 'color-mix(in srgb, var(--accent) 50%, transparent)'
+                e.currentTarget.style.background = 'color-mix(in srgb, var(--bg-card) 90%, transparent)'
+              }}
+              onMouseOut={e => {
+                e.currentTarget.style.borderColor = 'var(--border-color)'
+                e.currentTarget.style.background = 'color-mix(in srgb, var(--bg-card) 70%, transparent)'
+              }}
+            >
+              <div
+                className="p-2 rounded-lg w-fit mb-3"
+                style={{ background: 'color-mix(in srgb, var(--accent) 12%, transparent)', color: 'var(--accent)' }}
+              >
+                {f.icon}
+              </div>
+              <h3 className="text-sm font-semibold mb-1" style={{ color: 'var(--text-main)' }}>{f.title}</h3>
+              <p className="text-xs leading-relaxed" style={{ color: 'var(--text-muted)' }}>{f.desc}</p>
+            </div>
+          ))}
         </div>
       </main>
 
-      {/* Basic Footer */}
-      <footer className="py-8 text-center text-sm text-text-muted border-t border-border-color bg-bg-card relative z-20">
-        <p>© 2026 Zenit Docs. Diseñado con una interfaz táctil y estática.</p>
+      {/* Footer */}
+      <footer
+        className="relative z-20 py-6 text-center border-t"
+        style={{ borderColor: 'var(--border-color)', background: 'color-mix(in srgb, var(--bg-main) 60%, transparent)', backdropFilter: 'blur(8px)' }}
+      >
+        <p className="text-xs" style={{ color: 'var(--text-faint)' }}>
+          © 2026 Zenit Docs — Hecho con 💜 para escritores y desarrolladores
+        </p>
       </footer>
     </div>
   )

@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:ital,wght@0,400;0,500;0,700;1,400&display=swap');
 @import "tailwindcss";
 @plugin "@tailwindcss/typography";
 
@@ -9,42 +9,824 @@
   --color-bg-deep: var(--bg-deep);
   --color-bg-main: var(--bg-main);
   --color-bg-card: var(--bg-card);
+  --color-bg-hover: var(--bg-hover);
   --color-border-color: var(--border-color);
   --color-text-main: var(--text-main);
   --color-text-muted: var(--text-muted);
+  --color-text-faint: var(--text-faint);
   --color-accent: var(--accent);
+  --color-accent2: var(--accent2);
 }
 
+/* ======================================================================
+   LIGHT THEME — GitHub clean
+====================================================================== */
 :root {
-  /* LIGHT (GitHub) */
-  --bg-deep: #ffffff;
-  --bg-main: #ffffff;
-  --bg-card: #f6f8fa;
-  --border-color: #d0d7de;
-  --text-main: #393939;
-  --text-muted: #636c76;
+  --bg-deep: #f0f0f3;
+  --bg-main: #fafafa;
+  --bg-card: #f0f0f3;
+  --bg-hover: #e4e4e9;
+  --border-color: #d3d3da;
+  --text-main: #2e2e38;
+  --text-muted: #6e6e80;
+  --text-faint: #9898b0;
   --accent: #4285f4;
+  --accent2: #6ea8fe;
 }
 
+/* ======================================================================
+   DARK THEME — Deep dark with blue accent (original style)
+====================================================================== */
 .dark {
-  /* DARK (Neutral Blue) */
-  --bg-deep: #12141c;
-  --bg-main: #171923;
-  --bg-card: #1e222e;
-  --border-color: #2e3545;
-  --text-main: #ededed;
-  --text-muted: #9ca3af;
+  --bg-deep: #0d0f14;
+  --bg-main: #12141c;
+  --bg-card: #181c28;
+  --bg-hover: #1e2333;
+  --border-color: #2a3045;
+  --text-main: #e2e4ed;
+  --text-muted: #8891aa;
+  --text-faint: #4e5568;
   --accent: #4285f4;
+  --accent2: #6ea8fe;
+}
+
+/* ======================================================================
+   BASE
+====================================================================== */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
 }
 
 body {
   background-color: var(--bg-deep);
   color: var(--text-main);
+  font-family: var(--font-sans);
   margin: 0;
-  overflow: hidden;
-  transition: background-color 0.3s ease;
+  transition: background-color 0.3s ease, color 0.3s ease;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
+/* ======================================================================
+   CUSTOM SCROLLBAR — Obsidian style
+====================================================================== */
+::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--border-color);
+  border-radius: 8px;
+  transition: background 0.2s;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--text-faint);
+}
+
+/* ======================================================================
+   SELECTION
+====================================================================== */
+::selection {
+  background: var(--accent) !important;
+  color: #fff !important;
+}
+
+::-moz-selection {
+  background: var(--accent) !important;
+  color: #fff !important;
+}
+
+/* ======================================================================
+   EDITOR TEXTAREA
+====================================================================== */
+.custom-editor-textarea {
+  caret-color: var(--accent);
+  line-height: 1.8;
+  tab-size: 2;
+}
+
+.custom-editor-textarea::placeholder {
+  color: var(--text-faint);
+}
+
+/* ======================================================================
+   PROSE / PREVIEW OVERRIDES
+====================================================================== */
+.prose {
+  --tw-prose-body: var(--text-main);
+  --tw-prose-headings: var(--text-main);
+  --tw-prose-lead: var(--text-muted);
+  --tw-prose-links: var(--accent);
+  --tw-prose-bold: var(--text-main);
+  --tw-prose-counters: var(--text-muted);
+  --tw-prose-bullets: var(--accent);
+  --tw-prose-hr: var(--border-color);
+  --tw-prose-quotes: var(--text-muted);
+  --tw-prose-quote-borders: var(--accent);
+  --tw-prose-captions: var(--text-muted);
+  --tw-prose-code: var(--accent2);
+  --tw-prose-pre-code: var(--text-main);
+  --tw-prose-pre-bg: var(--bg-card);
+  --tw-prose-th-borders: var(--border-color);
+  --tw-prose-td-borders: var(--border-color);
+}
+
+.prose h1 {
+  font-size: 1.9rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  border-bottom: 1px solid var(--border-color);
+  padding-bottom: 0.4em;
+  margin-bottom: 1rem;
+}
+
+.prose h2 {
+  font-size: 1.4rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+.prose code {
+  background: var(--bg-hover);
+  padding: 0.15em 0.4em;
+  border-radius: 4px;
+  font-size: 0.85em;
+  font-family: var(--font-mono);
+}
+
+.prose pre {
+  background: var(--bg-card) !important;
+  border: 1px solid var(--border-color) !important;
+  border-radius: 10px !important;
+  overflow: hidden;
+  position: relative;
+}
+
+.prose pre code {
+  background: transparent !important;
+  padding: 0 !important;
+  font-size: 0.8em;
+  line-height: 1.7;
+}
+
+.prose blockquote {
+  border-left: 3px solid var(--accent);
+  color: var(--text-muted);
+  font-style: normal;
+}
+
+/* ======================================================================
+   TABLE STYLING — Premium design
+====================================================================== */
+.prose table {
+  border-collapse: collapse;
+  width: 100%;
+  border-radius: 8px;
+  overflow: hidden;
+  border: 1px solid var(--border-color);
+  font-size: 0.85em;
+}
+
+.prose thead {
+  background: color-mix(in srgb, var(--accent) 8%, var(--bg-hover));
+}
+
+.prose thead tr th {
+  font-weight: 600;
+  text-align: left;
+  padding: 10px 14px;
+  font-size: 0.78em;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-muted);
+  border-bottom: 1px solid var(--border-color);
+  border-right: 1px solid var(--border-color);
+}
+
+.prose thead tr th:last-child {
+  border-right: none;
+}
+
+.prose tbody tr {
+  transition: background 0.1s;
+}
+
+.prose tbody tr:hover {
+  background: color-mix(in srgb, var(--accent) 5%, transparent);
+}
+
+.prose tbody tr:nth-child(even) {
+  background: color-mix(in srgb, var(--bg-hover) 50%, transparent);
+}
+
+.prose tbody tr:nth-child(even):hover {
+  background: color-mix(in srgb, var(--accent) 5%, transparent);
+}
+
+.prose td {
+  padding: 9px 14px;
+  border-right: 1px solid var(--border-color);
+  border-bottom: 1px solid var(--border-color);
+  vertical-align: top;
+  line-height: 1.5;
+}
+
+.prose td:last-child {
+  border-right: none;
+}
+
+.prose tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.prose a {
+  color: var(--accent);
+  text-decoration: none;
+  border-bottom: 1px solid transparent;
+  transition: border-color 0.2s;
+}
+
+.prose a:hover {
+  border-bottom-color: var(--accent);
+}
+
+.prose mark {
+  background: #ffd54f33;
+  color: inherit;
+  padding: 0.1em 0.2em;
+  border-radius: 3px;
+}
+
+/* ======================================================================
+   CALLOUT / ALERTS — Obsidian-inspired style
+====================================================================== */
+.callout {
+  border-radius: 8px;
+  margin: 1.25rem 0;
+  overflow: hidden;
+  border: 1px solid;
+}
+
+.callout-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 14px;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  border-bottom: 1px solid;
+}
+
+.callout-body {
+  padding: 12px 14px;
+  font-size: 0.9em;
+  line-height: 1.6;
+}
+
+.callout-body>*:first-child {
+  margin-top: 0 !important;
+}
+
+.callout-body>*:last-child {
+  margin-bottom: 0 !important;
+}
+
+/* Per-type colours */
+.callout-note {
+  border-color: rgba(88, 166, 255, 0.35);
+  background: rgba(88, 166, 255, 0.06);
+}
+
+.callout-note .callout-header {
+  color: #58a6ff;
+  background: rgba(88, 166, 255, 0.1);
+  border-bottom-color: rgba(88, 166, 255, 0.2);
+}
+
+.callout-tip {
+  border-color: rgba(63, 185, 80, 0.35);
+  background: rgba(63, 185, 80, 0.06);
+}
+
+.callout-tip .callout-header {
+  color: #3fb950;
+  background: rgba(63, 185, 80, 0.1);
+  border-bottom-color: rgba(63, 185, 80, 0.2);
+}
+
+.callout-important {
+  border-color: rgba(163, 113, 247, 0.35);
+  background: rgba(163, 113, 247, 0.06);
+}
+
+.callout-important .callout-header {
+  color: #a371f7;
+  background: rgba(163, 113, 247, 0.1);
+  border-bottom-color: rgba(163, 113, 247, 0.2);
+}
+
+.callout-warning {
+  border-color: rgba(210, 153, 34, 0.35);
+  background: rgba(210, 153, 34, 0.06);
+}
+
+.callout-warning .callout-header {
+  color: #d29922;
+  background: rgba(210, 153, 34, 0.1);
+  border-bottom-color: rgba(210, 153, 34, 0.2);
+}
+
+.callout-caution {
+  border-color: rgba(248, 81, 73, 0.35);
+  background: rgba(248, 81, 73, 0.06);
+}
+
+.callout-caution .callout-header {
+  color: #f85149;
+  background: rgba(248, 81, 73, 0.1);
+  border-bottom-color: rgba(248, 81, 73, 0.2);
+}
+
+/* Light mode: slightly more visible */
+:root .callout-header {
+  filter: brightness(0.85);
+}
+
+/* ======================================================================
+   PREVIEW WHITE BACKGROUND — Light mode
+====================================================================== */
+:root #main-preview-container {
+  background: #ffffff !important;
+}
+
+.dark #main-preview-container {
+  background: var(--bg-deep) !important;
+}
+
+/* ======================================================================
+   LOGO / LIGHTNING BOLT ICON FIX
+====================================================================== */
+.zenit-logo {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* ======================================================================
+   MOBILE & RESPONSIVE — ≤ 768px
+====================================================================== */
+@media (max-width: 768px) {
+
+  /* Sidebar becomes full-height overlay drawer */
+  aside.sidebar-mobile-drawer {
+    position: fixed !important;
+    top: 0;
+    left: 0;
+    height: 100dvh !important;
+    z-index: 50 !important;
+    transition: transform 0.25s ease !important;
+    box-shadow: 4px 0 24px rgba(0, 0, 0, 0.4);
+  }
+
+  /* Drawer overlay backdrop */
+  .sidebar-backdrop {
+    display: block !important;
+  }
+
+  /* No split view on mobile — always use full editor or full preview */
+  .mobile-hide {
+    display: none !important;
+  }
+
+  /* Toolbar scrolls horizontally on mobile */
+  .editor-toolbar {
+    overflow-x: auto !important;
+    flex-wrap: nowrap !important;
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+    padding: 0 8px !important;
+  }
+
+  .editor-toolbar::-webkit-scrollbar {
+    display: none;
+  }
+
+  /* Make touch targets bigger */
+  .editor-toolbar button {
+    min-width: 36px;
+    min-height: 36px;
+  }
+
+  /* Force single column on mobile */
+  .preview-pane-mobile {
+    width: 100% !important;
+    flex: 1 !important;
+  }
+
+  /* Header compact on mobile */
+  header {
+    padding: 0 8px !important;
+  }
+
+  /* Editor textarea padding reduced on mobile */
+  .custom-editor-textarea {
+    padding: 1rem !important;
+  }
+}
+
+/* Sidebar backdrop (hidden on desktop) */
+.sidebar-backdrop {
+  display: none;
+  position: fixed;
+  inset: 0;
+  z-index: 49;
+  background: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(2px);
+}
+
+
+/* ======================================================================
+   HIGHLIGHT.JS OVERRIDES — match our dark theme
+====================================================================== */
+.hljs {
+  background: transparent !important;
+  display: block;
+  overflow-x: auto;
+  padding: 1.1em 1.2em !important;
+  font-family: var(--font-mono) !important;
+  font-size: 0.8em !important;
+  line-height: 1.7 !important;
+}
+
+/* Code block header (language label) */
+.code-block-wrapper {
+  position: relative;
+  border: 1px solid var(--border-color);
+  border-radius: 10px;
+  overflow: hidden;
+  margin: 1rem 0;
+}
+
+.code-block-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 14px;
+  background: color-mix(in srgb, var(--bg-hover) 80%, transparent);
+  border-bottom: 1px solid var(--border-color);
+}
+
+.code-block-lang {
+  font-size: 10px;
+  font-weight: 700;
+  font-family: var(--font-mono);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-faint);
+}
+
+.code-block-copy {
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--text-faint);
+  cursor: pointer;
+  padding: 2px 8px;
+  border-radius: 4px;
+  border: 1px solid var(--border-color);
+  background: transparent;
+  transition: all 0.15s;
+  font-family: var(--font-sans);
+}
+
+.code-block-copy:hover {
+  color: var(--accent);
+  border-color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 8%, transparent);
+}
+
+/* ======================================================================
+   MERMAID DIAGRAM WRAPPER
+====================================================================== */
+.mermaid-wrapper {
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  border: 1px solid var(--border-color);
+  border-radius: 10px;
+  padding: 1.5rem;
+  margin: 1rem 0;
+  background: var(--bg-card);
+  overflow: auto;
+  min-height: 60px;
+  max-height: 600px;
+}
+
+.mermaid-wrapper svg {
+  max-width: 100% !important;
+  max-height: 560px !important;
+  height: auto !important;
+  width: auto !important;
+  display: block;
+  margin: 0 auto;
+}
+
+.mermaid-loading {
+  font-size: 11px;
+  color: var(--text-faint);
+  font-family: var(--font-mono);
+  animation: pulse-glow 1.5s ease-in-out infinite;
+}
+
+.mermaid-error {
+  font-size: 11px;
+  color: #f85149;
+  font-family: var(--font-mono);
+  padding: 8px 12px;
+  border-radius: 6px;
+  background: rgba(248, 81, 73, 0.08);
+  border: 1px solid rgba(248, 81, 73, 0.2);
+}
+
+/* Code block styles */
+.code-block-pre {
+  margin: 0 !important;
+  border-radius: 0 !important;
+  border: none !important;
+  background: var(--bg-card) !important;
+}
+
+/* ======================================================================
+   TOAST — Glass style
+====================================================================== */
+.sileo-toast {
+  backdrop-filter: blur(20px) !important;
+  -webkit-backdrop-filter: blur(20px) !important;
+  background: color-mix(in srgb, var(--bg-card) 88%, transparent) !important;
+  border: 1px solid var(--border-color) !important;
+  color: var(--text-main) !important;
+  box-shadow: 0 8px 40px rgba(0, 0, 0, 0.35) !important;
+  border-radius: 10px !important;
+}
+
+/* ======================================================================
+   TOOLBAR CHIP BUTTONS (alerts section)
+====================================================================== */
+.toolbar-chip {
+  font-size: 10px;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 5px;
+  transition: all 0.15s ease;
+  letter-spacing: 0.03em;
+}
+
+/* ======================================================================
+   SIDEBAR COLLAPSE ANIMATION
+====================================================================== */
+.sidebar-item-enter {
+  opacity: 0;
+  transform: translateX(-8px);
+}
+
+.sidebar-item-enter-active {
+  opacity: 1;
+  transform: translateX(0);
+  transition: opacity 0.2s, transform 0.2s;
+}
+
+/* ======================================================================
+   ACTIVE TAB indicator
+====================================================================== */
+.doc-tab-active {
+  position: relative;
+}
+
+.doc-tab-active::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 2px;
+  height: 60%;
+  background: var(--accent);
+  border-radius: 2px;
+}
+
+/* ======================================================================
+   GLASS PANELS
+====================================================================== */
+.glass {
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  background: color-mix(in srgb, var(--bg-main) 80%, transparent);
+}
+
+/* ======================================================================
+   PROSEMIRROR
+====================================================================== */
+.ProseMirror {
+  outline: none !important;
+  min-height: 50vh;
+}
+
+/* ======================================================================
+   LOADING PULSE
+====================================================================== */
+@keyframes pulse-glow {
+
+  0%,
+  100% {
+    opacity: 0.5;
+  }
+
+  50% {
+    opacity: 1;
+  }
+}
+
+.pulse-glow {
+  animation: pulse-glow 2s ease-in-out infinite;
+}
+
+/* ======================================================================
+   RIGHT-CLICK CONTEXT MENU
+====================================================================== */
+.context-menu {
+  position: fixed;
+  z-index: 9999;
+  min-width: 200px;
+  border-radius: 10px;
+  border: 1px solid var(--border-color);
+  background: color-mix(in srgb, var(--bg-card) 95%, transparent);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.35);
+  padding: 4px;
+  animation: fadeInUp 0.12s ease both;
+  user-select: none;
+}
+
+.context-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 6px 10px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: all 0.1s;
+  white-space: nowrap;
+}
+
+.context-menu-item:hover {
+  background: var(--bg-hover);
+  color: var(--text-main);
+}
+
+.context-menu-item.danger:hover {
+  background: rgba(248, 81, 73, 0.12);
+  color: #f85149;
+}
+
+.context-menu-item .cm-kbd {
+  margin-left: auto;
+  font-size: 9px;
+  font-family: var(--font-mono);
+  color: var(--text-faint);
+  background: var(--bg-hover);
+  padding: 1px 5px;
+  border-radius: 3px;
+  border: 1px solid var(--border-color);
+}
+
+.context-menu-sep {
+  height: 1px;
+  margin: 3px 6px;
+  background: var(--border-color);
+}
+
+.context-menu-label {
+  padding: 4px 10px 2px;
+  font-size: 9px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-faint);
+}
+
+/* ======================================================================
+   LANDING PAGE — Background Grid
+====================================================================== */
+@keyframes grid-move {
+  0% {
+    transform: translateY(-40px);
+  }
+
+  100% {
+    transform: translateY(0);
+  }
+}
+
+.bg-grid-moving {
+  position: absolute;
+  inset: -40px;
+  background-size: 36px 36px;
+  background-image:
+    linear-gradient(to right, var(--text-faint) 1px, transparent 1px),
+    linear-gradient(to bottom, var(--text-faint) 1px, transparent 1px);
+  opacity: 0.1;
+  animation: grid-move 4s linear infinite;
+  z-index: 0;
+}
+
+.bg-grid-mask {
+  position: absolute;
+  inset: 0;
+  mask-image: radial-gradient(ellipse 70% 70% at 50% 50%, black 20%, transparent 100%);
+  -webkit-mask-image: radial-gradient(ellipse 70% 70% at 50% 50%, black 20%, transparent 100%);
+  z-index: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+/* ======================================================================
+   FADE-IN ANIMATION
+====================================================================== */
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.fade-in-up {
+  animation: fadeInUp 0.4s ease both;
+}
+
+/* ======================================================================
+   OBSIDIAN-STYLE FOCUS RING
+====================================================================== */
+button:focus-visible,
+input:focus-visible,
+textarea:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+/* ======================================================================
+   EDITOR LINE NUMBERS GUTTER (visual effect)
+====================================================================== */
+.editor-gutter {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 48px;
+  background: var(--bg-card);
+  border-right: 1px solid var(--border-color);
+  pointer-events: none;
+  z-index: 1;
+}
+
+/* ======================================================================
+   RESIZER HANDLE
+====================================================================== */
+.panel-resizer {
+  width: 4px;
+  cursor: col-resize;
+  background: transparent;
+  transition: background 0.2s;
+  flex-shrink: 0;
+  position: relative;
+  z-index: 10;
+}
+
+.panel-resizer:hover,
+.panel-resizer.dragging {
+  background: var(--accent);
+}
+
+/* ======================================================================
+   PRINT STYLES
+====================================================================== */
 @media print {
   body * {
     visibility: hidden;
@@ -59,153 +841,183 @@ body {
     position: absolute;
     left: 0;
     top: 0;
-    width: 100vw;
+    width: 100%;
     height: auto;
     overflow: visible;
     border: none !important;
-    background: transparent !important;
-    padding: 2cm !important;
+    background: white !important;
+    color: #1a1a1a !important;
+    padding: 1.5cm 2cm !important;
+    font-family: 'Georgia', serif;
+    font-size: 11pt;
+    line-height: 1.6;
+  }
+
+  /* Tables look great in print */
+  #main-preview-container table {
+    border-collapse: collapse !important;
+    width: 100% !important;
+    border: 1px solid #ccc !important;
+    font-size: 9pt;
+  }
+
+  #main-preview-container th,
+  #main-preview-container td {
+    border: 1px solid #ccc !important;
+    padding: 6px 10px !important;
+    color: #1a1a1a !important;
+  }
+
+  #main-preview-container thead {
+    background: #f0f0f0 !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  /* Mermaid SVG prints well */
+  #main-preview-container .mermaid-wrapper {
+    border: 1px solid #ccc !important;
+    background: white !important;
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+
+  /* Code blocks in print */
+  #main-preview-container .code-block-wrapper {
+    border: 1px solid #ccc !important;
+    background: #f8f8f8 !important;
+    break-inside: avoid;
+    page-break-inside: avoid;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  #main-preview-container .code-block-header {
+    background: #ececec !important;
+    border-bottom: 1px solid #ccc !important;
+  }
+
+  #main-preview-container .code-block-copy {
+    display: none !important;
+  }
+
+  /* Alerts */
+  #main-preview-container .alert {
+    break-inside: avoid;
+    page-break-inside: avoid;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  /* Headings */
+  #main-preview-container h1 {
+    font-size: 20pt;
+    margin-bottom: 12pt;
+  }
+
+  #main-preview-container h2 {
+    font-size: 15pt;
+  }
+
+  #main-preview-container h3 {
+    font-size: 12pt;
+  }
+
+  /* Links show URL */
+  #main-preview-container a::after {
+    content: ' (' attr(href) ')';
+    font-size: 8pt;
+    color: #666;
   }
 }
 
-.alert {
-  border-left-width: 4px;
-  padding: 0.5rem 1rem;
-  margin: 1rem 0;
-  background: rgba(197, 197, 197, 0.15) !important;
+/* ======================================================================
+   HIGHLIGHT CSS THEME OVERRIDES FOR DARK MODE
+   Force dark code blocks in dark theme
+====================================================================== */
+.dark .hljs-keyword {
+  color: #79b8ff;
 }
 
-/* Base alerts (same in light and dark mode) */
-.alert-note {
-  border-color: #4ea0ff;
+.dark .hljs-string {
+  color: #9ecbff;
 }
 
-.alert-note strong {
-  color: #4ea0ff;
+.dark .hljs-comment {
+  color: #6a737d;
+  font-style: italic;
 }
 
-.alert-tip {
-  border-color: #62c562;
+.dark .hljs-number {
+  color: #f8c555;
 }
 
-.alert-tip strong {
-  color: #62c562;
+.dark .hljs-function {
+  color: #b392f0;
 }
 
-.alert-warning {
-  border-color: #ffd322;
+.dark .hljs-attr {
+  color: #79b8ff;
 }
 
-.alert-warning strong {
-  color: #ffd322;
+.dark .hljs-variable {
+  color: #e2e4ed;
 }
 
-.alert-important {
-  border-color: #8250df;
+.dark .hljs-title {
+  color: #b392f0;
 }
 
-.alert-important strong {
-  color: #8250df;
+.dark .hljs-built_in {
+  color: #f97583;
 }
 
-.alert-caution {
-  border-color: #ff5c5c;
+.dark .hljs-type {
+  color: #85e89d;
 }
 
-.alert-caution strong {
-  color: #ff5c5c;
+.dark .hljs-literal {
+  color: #79b8ff;
 }
 
-.alert strong {
-  display: flex !important;
-  align-items: center;
-  gap: 0;
-  margin-bottom: 4px;
-  font-size: 0.85rem;
-  font-weight: 600;
-  text-transform: capitalize;
+.dark .hljs-tag {
+  color: #85e89d;
 }
 
-/* Scrollbars */
-::-webkit-scrollbar {
-  width: 8px;
+.dark .hljs-name {
+  color: #85e89d;
 }
 
-::-webkit-scrollbar-track {
-  background: transparent;
+/* Light mode code */
+:root .hljs-keyword {
+  color: #d73a49;
 }
 
-::-webkit-scrollbar-thumb {
-  background: var(--border-color);
-  border-radius: 10px;
+:root .hljs-string {
+  color: #032f62;
 }
 
-::-webkit-scrollbar-thumb:hover {
-  background: var(--text-muted);
+:root .hljs-comment {
+  color: #6a737d;
+  font-style: italic;
 }
 
-/* Sileo Toast */
-.sileo-toast {
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  background: var(--bg-main) !important;
-  opacity: 0.8;
-  border: 1px solid var(--border-color) !important;
-  color: var(--text-main) !important;
-  box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.15) !important;
-  border-radius: 1rem !important;
+:root .hljs-number {
+  color: #005cc5;
 }
 
-/* Milkdown and ProseMirror Overrides */
-.ProseMirror {
-  outline: none !important;
-  min-height: 50vh;
+:root .hljs-function {
+  color: #6f42c1;
 }
 
-/* Custom Editor Textarea Select & Caret */
-::selection {
-  background: var(--accent) !important;
-  color: #fff !important;
+:root .hljs-attr {
+  color: #005cc5;
 }
 
-::-moz-selection {
-  background: var(--accent) !important;
-  color: #fff !important;
+:root .hljs-built_in {
+  color: #e36209;
 }
 
-.custom-editor-textarea {
-  caret-color: var(--accent);
-}
-
-/* Landing Page Animated Grid */
-@keyframes grid-move {
-  0% {
-    transform: translateY(-40px);
-  }
-
-  100% {
-    transform: translateY(0);
-  }
-}
-
-.bg-grid-moving {
-  position: absolute;
-  inset: -40px;
-  /* Bleed to prevent popping */
-  background-size: 40px 40px;
-  background-image: linear-gradient(to right, var(--text-muted) 1px, transparent 1px),
-    linear-gradient(to bottom, var(--text-muted) 1px, transparent 1px);
-  opacity: 0.15;
-  animation: grid-move 3s linear infinite;
-  z-index: 0;
-}
-
-.bg-grid-mask {
-  position: absolute;
-  inset: 0;
-  mask-image: radial-gradient(ellipse 60% 60% at 50% 50%, black 10%, transparent 100%);
-  -webkit-mask-image: radial-gradient(ellipse 60% 60% at 50% 50%, black 10%, transparent 100%);
-  z-index: 0;
-  overflow: hidden;
-  pointer-events: none;
+:root .hljs-type {
+  color: #22863a;
 }

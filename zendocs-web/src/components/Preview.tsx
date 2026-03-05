@@ -2,167 +2,267 @@
 import { marked } from 'marked'
 import hljs from 'highlight.js'
 import DOMPurify from 'dompurify'
-import { useEffect, useRef, useMemo } from 'react'
+import { useEffect, useRef, useMemo, useState } from 'react'
 import mermaid from 'mermaid'
+import { useTheme } from 'next-themes'
 
-// We configure marked locally inside the component to avoid weird global state conflicts,
-// but usually it's better to do this once. For robust local testing, we do it here.
-const configureMarked = () => {
+// ── Configure marked ONCE at module level ─────────────────────────────
+let markedConfigured = false
+
+function getMarked() {
+    if (markedConfigured) return marked
+
     const renderer = new marked.Renderer()
 
-    // Save the original code renderer
-    const originalCodeRenderer = renderer.code.bind(renderer);
-
-    // Override the code renderer for Mermaid
+    // ── Code blocks with syntax highlight + header ──────────────────
     renderer.code = (token: any) => {
-        if (token.lang === 'mermaid') {
-            const escapeHtml = (unsafe: string) => {
-                return unsafe
-                    .replace(/&/g, "&amp;")
-                    .replace(/</g, "&lt;")
-                    .replace(/>/g, "&gt;")
-                    .replace(/"/g, "&quot;")
-                    .replace(/'/g, "&#039;");
-            };
-            return `<div class="mermaid">${escapeHtml(token.text)}</div>\n`;
+        const lang = (token.lang || '').trim().toLowerCase()
+        const rawCode = token.text || ''
+
+        // Mermaid: output a blank container — we fill it with JS later
+        if (lang === 'mermaid') {
+            // Store raw code in data-code attribute (base64 to avoid escaping issues)
+            const encoded = typeof btoa !== 'undefined'
+                ? btoa(unescape(encodeURIComponent(rawCode)))
+                : ''
+            return `<div class="mermaid-wrapper not-prose" data-code="${encoded}"><div class="mermaid-loading">Renderizando diagrama...</div></div>\n`
         }
-        return originalCodeRenderer(token);
-    };
 
-    // Custom Blockquote Renderer for Alerts
+        // Syntax highlight
+        let highlighted = ''
+        try {
+            if (lang && hljs.getLanguage(lang)) {
+                highlighted = hljs.highlight(rawCode, { language: lang, ignoreIllegals: true }).value
+            } else {
+                highlighted = hljs.highlightAuto(rawCode).value
+            }
+        } catch {
+            highlighted = rawCode.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+        }
+
+        const displayLang = lang || 'text'
+        return `<div class="code-block-wrapper not-prose" data-lang="${displayLang}">
+  <div class="code-block-header">
+    <span class="code-block-lang">${displayLang}</span>
+    <button class="code-block-copy" data-copy="true">Copiar</button>
+  </div>
+  <pre class="code-block-pre"><code class="hljs language-${displayLang}">${highlighted}</code></pre>
+</div>\n`
+    }
+
+    // ── Alert blockquotes — Obsidian-style ───────────────────────────
     renderer.blockquote = (token: any) => {
-        const text = token.text || '';
+        const text = token.text || ''
         const match = text.match(/^\s*\[!(NOTE|TIP|IMPORTANT|WARNING|CAUTION)\]/i)
-
         if (match) {
             const type = match[1].toUpperCase()
-            const alerts: Record<string, { class: string, icon: string }> = {
-                'NOTE': { class: 'alert-note', icon: `<svg class="w-4 h-4 mr-2 mb-0 inline" viewBox="0 0 16 16" fill="currentColor"><path d="M0 8a8 8 0 1 1 16 0A8 8 0 0 1 0 8Zm8-6.5a6.5 6.5 0 1 0 0 13 6.5 6.5 0 0 0 0-13ZM6.5 7.75A.75.75 0 0 1 7.25 7h1v5.25a.75.75 0 0 1-1.5 0V8h-.25a.75.75 0 0 1-.75-.75ZM8 5.5a1 1 0 1 1 0-2 1 1 0 0 1 0 2Z"></path></svg>` },
-                'TIP': { class: 'alert-tip', icon: `<svg class="w-4 h-4 mr-2 mb-0 inline" viewBox="0 0 16 16" fill="currentColor"><path d="M8 1.5c-2.363 0-4 1.69-4 3.75 0 .984.424 1.625.984 2.304l.214.253c.223.264.47.556.673.848.284.411.537.896.621 1.49a.75.75 0 0 1-1.484.211c-.04-.282-.163-.547-.37-.843a5.352 5.352 0 0 0-.585-.744l-.224-.264c-.543-.643-.984-1.326-.984-2.255 0-2.81 2.387-5.25 5.5-5.25 3.113 0 5.5 2.44 5.5 5.25 0 .929-.441 1.612-.984 2.255l-.224.264a5.353 5.353 0 0 0-.585.744c-.207.296-.33.561-.37.843a.75.75 0 0 1-1.484-.211c.084-.594.337-1.079.621-1.49.203-.292.45-.584.673-.848l.214-.253c.56-.679.984-1.32.984-2.304 0-2.06-1.637-3.75-4-3.75ZM5.75 12h4.5a.75.75 0 0 1 0 1.5h-4.5a.75.75 0 0 1 0-1.5ZM6 15.25a.75.75 0 0 1 .75-.75h2.5a.75.75 0 0 1 0 1.5h-2.5a.75.75 0 0 1-.75-.75Z"></path></svg>` },
-                'IMPORTANT': { class: 'alert-important', icon: `<svg class="w-4 h-4 mr-2 mb-0 inline" viewBox="0 0 16 16" fill="currentColor"><path d="M0 1.75C0 .784.784 0 1.75 0h12.5C15.216 0 16 .784 16 1.75v9.5A1.75 1.75 0 0 1 14.25 13H8.06l-2.573 2.573A1.458 1.458 0 0 1 3 14.543V13H1.75A1.75 1.75 0 0 1 0 11.25Zm1.75-.25a.25.25 0 0 0-.25.25v9.5c0 .138.112.25.25.25h2a.75.75 0 0 1 .75.75v2.19l2.72-2.72a.75.75 0 0 1 .53-.22h6.5a.25.25 0 0 0 .25-.25v-9.5a.25.25 0 0 0-.25-.25Zm7 2.25v2.5a.75.75 0 0 1-1.5 0v-2.5a.75.75 0 0 1 1.5 0ZM9 9a1 1 0 1 1-2 0 1 1 0 0 1 2 0Z"></path></svg>` },
-                'WARNING': { class: 'alert-warning', icon: `<svg class="w-4 h-4 mr-2 mb-0 inline" viewBox="0 0 16 16" fill="currentColor"><path d="M6.457 1.047c.659-1.234 2.427-1.234 3.086 0l6.082 11.396c.613 1.15-.227 2.557-1.543 2.557H1.918c-1.316 0-2.156-1.407-1.543-2.557Zm2.628-1.047a1.432 1.432 0 0 0-2.17 0L.833 11.396c-.347.65-.015 1.442.709 1.442h12.916c.724 0 1.056-.792.709-1.442ZM8 10.5a.75.75 0 0 1 .75.75v1.5a.75.75 0 0 1-1.5 0v-1.5a.75.75 0 0 1 .75-.75Zm0-6a.75.75 0 0 1 .75.75v3.5a.75.75 0 0 1-1.5 0v-3.5A.75.75 0 0 1 8 4.5Z"></path></svg>` },
-                'CAUTION': { class: 'alert-caution', icon: `<svg class="w-4 h-4 mr-2 mb-0 inline" viewBox="0 0 16 16" fill="currentColor"><path d="M4.47.22A.749.749 0 0 1 5 0h6c.199 0 .389.079.53.22l4.25 4.25c.141.14.22.331.22.53v6a.749.749 0 0 1-.22.53l-4.25 4.25A.749.749 0 0 1 11 16H5a.749.749 0 0 1-.53-.22L.22 11.53A.749.749 0 0 1 0 11V5c0-.199.079-.389.22-.53Zm1.06 1.28L1.5 5.53v4.94l4.03 4.03h4.94l4.03-4.03V5.53L10.47 1.5ZM9 4v4.5a.75.75 0 0 1-1.5 0V4a.75.75 0 0 1 1.5 0ZM7.5 12.5a1 1 0 1 1 0-2 1 1 0 0 1 0 2Z"></path></svg>` }
+
+            // Lucide icons — stroke-based 24x24, exact paths from lucide-react package
+            const S = 'stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"'
+            const ico = (p: string) => `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" ${S} style="flex-shrink:0">${p}</svg>`
+
+            const ICONS: Record<string, string> = {
+                NOTE: ico('<path d="M10 2v8l3-3 3 3V2"/><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H19a1 1 0 0 1 1 1v18a1 1 0 0 1-1 1H6.5a1 1 0 0 1 0-5H20"/>'),      // BookMarked
+                TIP: ico('<path d="M21.174 6.812a1 1 0 0 0-3.986-3.987L3.842 16.174a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497z"/><line x1="16" y1="8" x2="20" y2="12"/>'),   // PenLine (notebook-pen)
+                IMPORTANT: ico('<path d="M12 3q1 4 4 6.5t3 5.5a1 1 0 0 1-14 0 5 5 0 0 1 1-3 1 1 0 0 0 5 0c0-2-1.5-3-1.5-5q0-2 2.5-4"/>'),                            // Flame
+                WARNING: ico('<path d="M22 17a2 2 0 0 1-2 2H6.828a2 2 0 0 0-1.414.586l-2.202 2.202A.71.71 0 0 1 2 21.286V5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2z"/><path d="M12 15h.01"/><path d="M12 7v4"/>'),  // MessageSquareWarning
+                CAUTION: ico('<path d="M7 18v-6a5 5 0 1 1 10 0v6"/><path d="M5 21a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-1a2 2 0 0 0-2-2H7a2 2 0 0 0-2 2z"/><path d="M21 12h1"/><path d="M18.5 4.5 18 5"/><path d="M2 12h1"/><path d="M12 2v1"/><path d="m4.929 4.929.707.707"/><path d="M12 12v6"/>'), // Siren
             }
-            const alertInfo = alerts[type]
 
-            // Parse the inner rest of the text
-            const innerText = text.substring(match[0].length).trimStart();
-            const innerHtml = marked.parse(innerText)
+            const LABELS: Record<string, string> = {
+                NOTE: 'Nota', TIP: 'Tip', IMPORTANT: 'Importante', WARNING: 'Aviso', CAUTION: 'Peligro'
+            }
 
-            return `
-                    <div class="alert ${alertInfo.class}">
-                        <strong>${alertInfo.icon} ${type.toLowerCase()}</strong>
-                        ${innerHtml as string}
-                    </div>
-                `
+            const inner = marked.parse(text.substring(match[0].length).trimStart()) as string
+            return `<div class="callout callout-${type.toLowerCase()}">
+  <div class="callout-header">${ICONS[type]}<span>${LABELS[type]}</span></div>
+  <div class="callout-body">${inner}</div>
+</div>`
         }
-        // Standard blockquote
         return `<blockquote>\n${marked.parse(text) as string}</blockquote>\n`
     }
 
-    const highlightExtension = {
-        name: 'highlightmark',
-        level: 'inline',
-        start(src: string) { return src.match(/==/)?.index; },
-        tokenizer(src: string) {
-            const rule = /^==([^=]+)==/;
-            const match = rule.exec(src);
-            if (match) {
-                return {
-                    type: 'highlightmark',
-                    raw: match[0],
-                    text: match[1],
-                    // Use this.lexer correctly depending on internal Marked instance bindings
-                    // if it fails, fallback to rendering directly
-                };
-            }
-            return false;
-        },
-        renderer(token: any) {
-            return `<mark>${marked.parseInline(token.text)}</mark>`;
-        }
-    };
 
+    // ── ==highlight== inline extension ───────────────────────────────
     marked.use({
         renderer,
-        extensions: [highlightExtension],
-        breaks: true, // Prevents aggressive lazy blockquotes that break on a single enter
-        gfm: true
+        extensions: [{
+            name: 'highlightmark',
+            level: 'inline',
+            start(src: string) { return src.indexOf('==') },
+            tokenizer(src: string) {
+                const m = /^==([^=\n]+)==/.exec(src)
+                return m ? { type: 'highlightmark', raw: m[0], text: m[1] } : undefined
+            },
+            renderer(token: any) {
+                return `<mark>${marked.parseInline(token.text)}</mark>`
+            },
+        }],
+        breaks: true,
+        gfm: true,
     })
 
+    markedConfigured = true
     return marked
 }
 
-const markedInstance = configureMarked()
-
-export function Preview({ content, variables }: { content: string, variables: Record<string, string> }) {
-    const previewRef = useRef<HTMLDivElement>(null)
-
-    const html = useMemo(() => {
-        let rawText = content
-        for (const key in variables) {
-            if (variables[key]) {
-                const regex = new RegExp(`\\{\\{${key}\\}\\}`, 'g')
-                rawText = rawText.replace(regex, variables[key] as string)
+// ── Mermaid config (only light/dark variants) ─────────────────────────
+function getMermaidTheme(isDark: boolean) {
+    return {
+        theme: (isDark ? 'dark' : 'default') as any,
+        fontFamily: 'Inter, system-ui, sans-serif',
+        themeVariables: isDark
+            ? {
+                primaryColor: '#1a2d5a',
+                primaryTextColor: '#e2e4ed',
+                primaryBorderColor: '#2a3045',
+                lineColor: '#4285f4',
+                background: '#12141c',
+                mainBkg: '#181c28',
+                nodeBorder: '#2a3045',
+                clusterBkg: '#1e2333',
+                titleColor: '#e2e4ed',
+                edgeLabelBackground: '#1e2333',
+                activeTaskBorderColor: '#4285f4',
+                activeTaskBkgColor: '#1a2d5a',
             }
+            : {
+                primaryColor: '#dbeafe',
+                primaryTextColor: '#1e3a6e',
+                primaryBorderColor: '#93c5fd',
+                lineColor: '#2563eb',
+                background: '#fafafa',
+                mainBkg: '#eff6ff',
+                nodeBorder: '#93c5fd',
+                clusterBkg: '#f0f0f3',
+                titleColor: '#1e3a6e',
+            },
+    }
+}
+
+// ── Preview component ─────────────────────────────────────────────────
+export function Preview({ content, variables }: { content: string; variables: Record<string, string> }) {
+    const previewRef = useRef<HTMLDivElement>(null)
+    const { resolvedTheme } = useTheme()
+    const isDark = resolvedTheme === 'dark'
+
+    // Debounce for expensive operations (mermaid)
+    const [debouncedContent, setDebouncedContent] = useState(content)
+    useEffect(() => {
+        const t = setTimeout(() => setDebouncedContent(content), 500)
+        return () => clearTimeout(t)
+    }, [content])
+
+    // Parse markdown → HTML (runs on every keystroke for instant feedback on text)
+    const html = useMemo(() => {
+        const m = getMarked()
+        let raw = content
+        for (const k in variables) {
+            if (variables[k]) raw = raw.replace(new RegExp(`\\{\\{${k}\\}\\}`, 'g'), variables[k])
         }
-
-        // 1. Convert Markdown -> HTML
-        const rawHtml = markedInstance.parse(rawText) as string
-
-        // 2. Safely Purify HTML
-        const safeHtml = DOMPurify.sanitize(rawHtml, {
-            ADD_TAGS: ['svg', 'path', 'mark'],  // Ensure alert SVGs and marks stay
-            ADD_ATTR: ['viewBox', 'fill', 'stroke', 'strokeWidth', 'strokeLinejoin', 'd', 'class']
+        const rawHtml = m.parse(raw) as string
+        return DOMPurify.sanitize(rawHtml, {
+            ADD_TAGS: ['svg', 'path', 'line', 'polyline', 'rect', 'circle', 'mark'],
+            ADD_ATTR: ['viewBox', 'fill', 'stroke', 'stroke-width', 'stroke-linecap', 'stroke-linejoin',
+                'd', 'x1', 'y1', 'x2', 'y2', 'cx', 'cy', 'r', 'rx', 'ry',
+                'class', 'style', 'width', 'height',
+                'data-code', 'data-lang', 'data-copy', 'data-rendered'],
+            FORBID_ATTR: [],
         })
-
-        return safeHtml
     }, [content, variables])
 
+    // Attach copy button handlers after HTML renders
     useEffect(() => {
-        mermaid.initialize({
-            startOnLoad: false,
-            theme: document.body.classList.contains('dark') ? 'dark' : 'default',
-            securityLevel: 'loose'
-        });
-
-        const initMermaid = async () => {
-            if (previewRef.current) {
-                // Initialize Highlight.js
-                previewRef.current.querySelectorAll('pre code').forEach((el) => {
-                    if (!el.classList.contains('hljs') && !el.classList.contains('language-mermaid')) {
-                        hljs.highlightElement(el as HTMLElement)
-                    }
+        const container = previewRef.current
+        if (!container) return
+        const buttons = container.querySelectorAll<HTMLButtonElement>('[data-copy="true"]')
+        buttons.forEach(btn => {
+            // Clone to remove old listeners
+            const fresh = btn.cloneNode(true) as HTMLButtonElement
+            btn.replaceWith(fresh)
+            fresh.addEventListener('click', () => {
+                const code = fresh.closest('.code-block-wrapper')?.querySelector('code')
+                if (!code) return
+                navigator.clipboard.writeText(code.innerText).then(() => {
+                    fresh.textContent = '✓ Copiado'
+                    fresh.style.color = '#4285f4'
+                    fresh.style.borderColor = '#4285f4'
+                    setTimeout(() => {
+                        fresh.textContent = 'Copiar'
+                        fresh.style.color = ''
+                        fresh.style.borderColor = ''
+                    }, 2000)
                 })
+            })
+        })
+    }, [html])
 
-                // Run Mermaid correctly
+    // Render Mermaid (debounced so it doesn't flicker on every keystroke)
+    useEffect(() => {
+        const container = previewRef.current
+        if (!container) return
+
+        const wrappers = container.querySelectorAll<HTMLElement>('.mermaid-wrapper:not([data-rendered])')
+        if (wrappers.length === 0) return
+
+        const cfg = getMermaidTheme(isDark)
+        mermaid.initialize({ startOnLoad: false, securityLevel: 'loose', ...cfg })
+
+        const renderAll = async () => {
+            for (const wrapper of Array.from(wrappers)) {
                 try {
-                    const mermaidNodes = previewRef.current.querySelectorAll('.mermaid')
-                    if (mermaidNodes.length > 0) {
-                        await mermaid.run({
-                            nodes: Array.from(mermaidNodes) as HTMLElement[],
-                            suppressErrors: true
-                        });
+                    const encoded = wrapper.getAttribute('data-code') || ''
+                    const code = encoded
+                        ? decodeURIComponent(escape(atob(encoded)))
+                        : ''
+
+                    if (!code.trim()) continue
+
+                    const id = `mermaid-${Math.random().toString(36).slice(2)}`
+                    const { svg } = await mermaid.render(id, code)
+
+                    // Fix SVG dimensions (remove invalid height='auto' attribute, use CSS instead)
+                    const tmp = document.createElement('div')
+                    tmp.innerHTML = svg
+                    const svgEl = tmp.querySelector('svg')
+                    if (svgEl) {
+                        const w = svgEl.getAttribute('width') || ''
+                        const h = svgEl.getAttribute('height') || ''
+                        // Set viewBox for proper scaling if missing
+                        if (!svgEl.getAttribute('viewBox') && w && h && w !== '100%') {
+                            svgEl.setAttribute('viewBox', `0 0 ${parseFloat(w)} ${parseFloat(h)}`)
+                        }
+                        svgEl.setAttribute('width', '100%')
+                        svgEl.removeAttribute('height')       // SVG attr doesn't support 'auto' — let CSS handle it
+                        svgEl.style.maxWidth = '100%'
+                        svgEl.style.height = 'auto'           // CSS 'auto' is valid here
                     }
-                } catch (error) {
-                    console.error('Mermaid render error', error)
+
+                    wrapper.innerHTML = tmp.innerHTML
+                    wrapper.setAttribute('data-rendered', 'true')
+                } catch (e) {
+                    console.warn('Mermaid render error:', e)
+                    wrapper.innerHTML = `<div class="mermaid-error">⚠ Error en diagrama. Revisa la sintaxis.</div>`
+                    wrapper.setAttribute('data-rendered', 'true')
                 }
             }
         }
 
-        // Small timeout to ensure DOM is fully painted by React
-        const timeoutId = setTimeout(() => {
-            initMermaid()
-        }, 50);
-        return () => clearTimeout(timeoutId);
-    }, [html])
+        renderAll()
+    }, [debouncedContent, isDark])  // uses debounced content so it doesn't flicker
 
     return (
         <div
+            id="main-preview-container"
             ref={previewRef}
-            className="flex-1 p-10 overflow-y-auto prose prose-sm dark:prose-invert max-w-none text-text-main prose-p:text-text-main prose-headings:text-text-main prose-strong:text-text-main"
+            className="flex-1 overflow-y-auto"
+            style={{
+                padding: '2rem 2.5rem',
+                color: 'var(--text-main)',
+                fontFamily: 'var(--font-sans)',
+                background: isDark ? 'var(--bg-deep)' : '#ffffff',
+            }}
             dangerouslySetInnerHTML={{ __html: html }}
         />
     )
 }
-
